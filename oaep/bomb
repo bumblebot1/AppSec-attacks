@@ -21,7 +21,7 @@ class Attack:
     self.k     = int(ceil(log(self.N, 256)))
     self.B     =  pow(2, 8 * (self.k - 1))
     self.e     = int(file.readline(), 16)
-    self.label = int(file.readline(), 16)
+    self.label = file.readline().strip()
     self.c     = int(file.readline(), 16)
 
     self.interactionCount = 0
@@ -31,7 +31,7 @@ class Attack:
   
   def Oracle(self, f):
     challenge = pow(f, self.e, self.N) * self.c % self.N
-    self.proc_in.write("%X\n" % self.label )
+    self.proc_in.write("%s\n" % self.label)
     self.proc_in.flush()
 
     self.proc_in.write("%s\n" % ("%X" % challenge).zfill(256))
@@ -48,8 +48,7 @@ class Attack:
         code = self.Oracle(f1)
 
     if code != ERROR1 :
-        raise Exception("Stage 1 has failed")
-
+        raise Exception("Stage 1 has failed %d" % code)
     return f1
 
   def Stage2(self, f1) :
@@ -67,7 +66,6 @@ class Attack:
       return f2
 
   def Stage3(self, f2) :
-      # 3.1
       m_min = ceildiv(self.N, f2)
       m_max = floordiv((self.N + self.B), f2)
       while m_min != m_max :
