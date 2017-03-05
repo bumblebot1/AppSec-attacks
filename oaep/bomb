@@ -7,7 +7,7 @@ import os
 from math import ceil, floor, log
 
 def ceildiv(x, y):
-    return - (-x // y)
+    return -(-x // y)
 
 def floordiv(x, y):
     return x // y
@@ -17,12 +17,14 @@ ERROR1  = 1
 ERROR2  = 2
 class Attack:
   def __init__(self, file, proc_in, proc_out):
-    self.N     = int(file.readline(), 16)
-    self.k     = int(ceil(log(self.N, 256)))
-    self.B     =  pow(2, 8 * (self.k - 1))
-    self.e     = int(file.readline(), 16)
-    self.label = file.readline().strip()
-    self.c     = int(file.readline(), 16)
+    temp        = file.readline().strip()
+    self.length = len(temp)
+    self.N      = int(temp, 16)
+    self.k      = int(ceil(log(self.N, 256)))
+    self.B      =  pow(2, 8 * (self.k - 1))
+    self.e      = int(file.readline(), 16)
+    self.label  = file.readline().strip()
+    self.c      = int(file.readline(), 16)
 
     self.interactionCount = 0
 
@@ -34,7 +36,7 @@ class Attack:
     self.proc_in.write("%s\n" % self.label)
     self.proc_in.flush()
 
-    self.proc_in.write("%s\n" % ("%X" % challenge).zfill(256))
+    self.proc_in.write("%s\n" % ("%X" % challenge).zfill(self.length))
     self.proc_in.flush()
 
     return int(self.proc_out.readline().strip())
@@ -81,8 +83,7 @@ class Attack:
               m_max = floordiv((i_N + self.B) , f3)
           else:
               raise Exception("Stage 3 has failed")
-
-      return ("%X" % m_min).zfill(256)
+      return ("%X" % m_min).zfill(self.length)
 
 if (__name__ == "__main__"):
   file = open(sys.argv[ 2 ], 'r')
