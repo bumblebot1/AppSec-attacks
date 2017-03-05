@@ -1,0 +1,99 @@
+#!/usr/bin/env python
+import hashlib
+import sys
+import subprocess
+import re
+import os
+from math import ceil, floor, log
+
+def ceildiv(x, y):
+    return - (-x // y)
+
+def floordiv(x, y):
+    return x // y
+
+SUCCESS = 0
+ERROR1  = 1
+ERROR2  = 2
+class Attack:
+  def __init__(self, file, proc_in, proc_out):
+    self.N     = int(file.readline(), 16)
+    self.k     = int(ceil(log(self.N, 256)))
+    self.B     =  pow(2, 8 * (self.k - 1))
+    self.e     = int(file.readline(), 16)
+    self.label = int(file.readline(), 16)
+    self.c     = int(file.readline(), 16)
+
+    self.interactionCount = 0
+
+    self.proc_in  = proc_in
+    self.proc_out = proc_out
+  
+  def Oracle(self, f):
+    challenge = pow(f, self.e, self.N) * self.c % self.N
+    self.proc_in.write("%X\n" % self.label )
+    self.proc_in.flush()
+
+    self.proc_in.write("%s\n" % ("%X" % challenge).zfill(256))
+    self.proc_in.flush()
+
+    return int(self.proc_out.readline().strip())
+  
+  def Stage1(self) :
+    f1 = 2
+    code = self.Oracle(f1)
+
+    while code == ERROR2 :
+        f1 *= 2
+        code = self.Oracle(f1)
+
+    if code != ERROR1 :
+        raise Exception("Stage 1 has failed")
+
+    return f1
+
+  def Stage2(self, f1) :
+      f1over2 = f1 // 2
+      f2 = floordiv((self.N + self.B), self.B) * f1over2
+      code = self.Oracle(f2)
+
+      while code == ERROR1 :
+          f2 += f1over2
+          code = self.Oracle(f2)
+          
+      if code != ERROR2 :
+          raise Exception("Stage2 has failed")
+
+      return f2
+
+  def Stage3(self, f2) :
+      # 3.1
+      m_min = ceildiv(self.N, f2)
+      m_max = floordiv((self.N + self.B), f2)
+      while m_min != m_max :
+          ftmp = floordiv((2 * self.B) , (m_max - m_min))
+          i = floordiv((ftmp * m_min) , self.N)
+          i_N = i * self.N
+          f3 = ceildiv(i_N, m_min)
+          code = self.Oracle(f3)
+
+          if code == ERROR1 :
+              m_min = ceildiv((i_N + self.B) , f3)
+          elif code == ERROR2 :
+              m_max = floordiv((i_N + self.B) , f3)
+          else:
+              raise Exception("Stage 3 has failed")
+
+      return ("%X" % m_min).zfill(256)
+
+if (__name__ == "__main__"):
+  file = open(sys.argv[ 2 ], 'r')
+  target = subprocess.Popen(args = os.path.realpath(sys.argv[ 1 ]), stdout = subprocess.PIPE, stdin = subprocess.PIPE)
+  
+  attacker = Attack(file, target.stdin, target.stdout)
+  f1 = attacker.Stage1()
+  f2 = attacker.Stage2(f1)
+  EM = attacker.Stage3(f2)
+  print("%d" % f1)
+  print("%d" % f2)
+  print("%s" % EM)
