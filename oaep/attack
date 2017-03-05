@@ -1,0 +1,87 @@
+#!/usr/bin/env python
+import hashlib
+import sys
+import subprocess
+import re
+import os
+from math import ceil, floor, log
+
+def interact(target, l_prime, c_prime, k):
+    target.stdin.write(l_prime)
+    target.stdin.write(c_prime)
+    target.stdin.flush()
+
+    return int(target.out.readline().strip(), 16)
+
+def stage1(target, N, e, l_prime, c_prime):
+    f_1 = 1
+    code = -1
+    interaction = 0
+    while(code != 1):
+        f_1 *= 2
+        f_1exp = (pow(f_1, e) * c_prime) % N
+        code = interact(target, l_prime, f_1exp)
+        interaction += 1
+    return (f_1, interaction)
+
+def stage2(target, N, e, l_prime, c_prime, B, f_1):
+    f_2 = floor(((N + B) / B) * f_1 / 2)
+    code = -1
+    interaction = 0
+    while True:
+        f_2exp = pow(f_2, e, N)
+        c_2 = (f_2exp * c_prime) % N
+        code = interact(target, l_prime, c_2)
+        interaction += 1
+        if code != 1:
+            break
+        f_2 += floor(f_1 / 2)
+    return (f_2, interaction)
+
+def stage3(target, N, e, l_prime, c_prime, B, f_2):
+    m_min = ceil(N / f_2)
+    m_max = floor((N + B) / f_2)
+    interaction = 0
+    while(m_min != m_max):
+        f_tmp = floor((2 * B) / (m_max - m_min))
+        i = floor(f_tmp * m_min / N)
+        f_3 = ceil(i * N / m_min)
+        c_3 = (pow(f_3, e) * c_prime) / N
+        code = interact(target, l_prime, c_3)
+        interaction += 1
+        if(code == 1):
+            m_min = ceil((i * N + B) / f_3) 
+        elif code == 2:
+            m_max = floor((i * N + B) / f_3)
+
+def attack(target, N, e, l_prime, c_prime, B):
+    totalInteractions = 0
+    res = stage1(target, N, e, l_prime, c_prime) #res=(f_1, interactionNumber)
+    totalInteractions += res[1]
+    
+    res = stage2(target, N, e, l_prime, c_prime, B, res[0]) #res=(f_2, interactionNumber)
+    totalInteractions += res[1]
+
+    res = stage3(target, N, e, l_prime, c_prime, B, res[0])
+
+def main(argv):
+    public = open(argv[2], 'r')
+    N_hex = public.readline()
+    e_hex = public.readline()
+    l_hex = public.readline()
+    c_hex = public.readline()
+    public.close()
+
+    N = int(N_hex, 16)
+    e = int(e_hex, 16)
+    l_prime = int(l_hex, 16)
+    c_prime = int(c_hex, 16)
+
+    # Compute limits k and B
+    k = ceil(log(N, 256))
+    B = pow(2, 8 * (k - 1)) % N
+    
+    target = subprocess.Popen(args = os.path.realpath(argv[ 1 ]), stdout = subprocess.PIPE, stdin = subprocess.PIPE)
+
+if __name__ == "__main__":
+    main(sys.argv)
