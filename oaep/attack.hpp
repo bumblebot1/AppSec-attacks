@@ -65,13 +65,13 @@ int Attack::Oracle(mpz_class f) {
 
   mpz_powm(challenge.get_mpz_t(), f.get_mpz_t(), e.get_mpz_t(), N.get_mpz_t());
   challenge = (challenge * c) % N;
-	gmp_fprintf(target_in, "%ZX\n", label);
+  gmp_fprintf(target_in, "%ZX\n", label);
   gmp_fprintf(target_in, "%0*ZX\n", mpz_sizeinbase(N.get_mpz_t(), 16), challenge);
-	fflush(target_in);
+  fflush(target_in);
 
   //get back error code
-	int code;
-	int res = fscanf(target_out, "%X", &code);
+  int code;
+  int res = fscanf(target_out, "%X", &code);
   interactionCount++;
   
   if(res == 1) {
