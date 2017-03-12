@@ -10,7 +10,7 @@ class Montgomery {
   public:
     void Multiplication(mpz_t res, mpz_t x, mpz_t y, mp_limb_t omega, mpz_t N);
     mp_limb_t GetOmega(mpz_t N);
-    void GetRhoSq(mpz_t rhoSquared, mpz_t N);
+    void GetRhoSquared(mpz_t rhoSquared, mpz_t N);
     void Convert(mpz_t res, mpz_t num, mpz_t rho_sq, mp_limb_t omega, mpz_t N);
     void Reduce(mpz_t res, mpz_t t, mp_limb_t omega, mpz_t N);
 };
@@ -34,10 +34,6 @@ void Montgomery::Multiplication(mpz_t res, mpz_t x, mpz_t y, mp_limb_t omega, mp
     mpz_addmul_ui(r, x, y_i); 
     mpz_addmul_ui(r, N, u);   
     mpz_tdiv_q_2exp(r, r, mp_bits_per_limb);
-  }
-  
-  if(mpz_cmp(r, N) >= 0) {
-    mpz_sub(r, r, N);
   }
   
   mpz_swap(res, r);
@@ -70,7 +66,7 @@ mp_limb_t Montgomery::GetOmega(mpz_t N) {
   * Function to calculate rho ^ 2, parameter to be used in the other montgomery form operations.
   * rhoSquared <- rho ^ 2 (mod N)
   */
-void Montgomery::GetRhoSq(mpz_t rhoSquared, mpz_t N) {
+void Montgomery::GetRhoSquared(mpz_t rhoSquared, mpz_t N) {
   mpz_set_ui(rhoSquared, 1);
   
   // upto 2 * l_N * w
