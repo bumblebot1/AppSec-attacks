@@ -1,11 +1,30 @@
 Q.1 Consider the parameters N = 3551, e = 5, d = 1373, and c = 888, all
     represented in decimal.  Use them to explain, in your own words, the
     principle of this attack (e.g., how and why it works).
+
 Q.2 To prevent the attack, the vendor suggests altering the software: the
     idea is that no matter what error occurs, the same error code will be
     produced.  Explain whether (and why, or why not) this change alone is
     sufficient.
+Q.2-ANS: By returning the same error code no matter the error produced 
+    the decryption becomes immune to Manger's attack however timing attacks are still possible.
+
 Q.4 This attack is based on the fact that decrypting a ciphertext of the
     form c = (f^e)*c' mod N produces a plaintext of the form f*m' mod N.
     Show why this fact is true.
+Q.4-ANS : This fact is due to the homomorphic property of the RSA encryption scheme.
+    Let e be the public key,N the modulus of the RSA encryption and c' the encryption of some message m'.
+    Assuming that d = e^-1 mod phi(N) is the secret key, to decrypt a cyphertext c
+    we compute m = c^d mod N where m is the plaintext. Therefore for a cyphertext such as 
+    c = (f^e)*c' mod N the decryption proceeds as follows:
+    m = ((f^e)*c')^d = (f^(e*d))*(c'^d) mod N.
+    However, because d = e^-1 mod phi(N), we have d*e = 1 mod phi(N).
+    By euler's theorem we also know that f^phi(N) = 1 mod N and thus we have f^(e*d) = f^(1+k*phi(N)) = f mod N, for some k.
+    Therefore the decryption of c = (f^e)*c' mod N is f*(c'^d) mod N and by denoting m' = c'^d we obtain the
+    find that the plaintext obtained by decrypting c is in fact f*m' mod N
+
 Q.5 Explain how the concept of plaintext awareness relates to this attack.
+Q.5-ANS: Chose cyphertext attacks are normally ineffective against a plaintext aware cryptosystem.
+    In the case of RSAES-OEAP scheme, the design of the scheme makes it likely that information will be leaked
+    between the decryption and integrity checking operations making the system susceptible to chosen cyphertext
+    attacks such as Manger's attack.
