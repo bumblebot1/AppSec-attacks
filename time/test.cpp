@@ -38,7 +38,8 @@ void test(ifstream& input)
   getline(input, line);
   gmp_sscanf(line.c_str(), "%ZX", e);
 
-  mpz_class c = 0b00, m, d=0b1010;
+  mpz_class c = 0b101010101010100101010, m, d=0b1010;
+  cout<<c<<endl;
   long time0 = interact(c, N, d, m);
   cout<<"Time for d=1010: "<<time0<<endl;
   d = 0b01001;

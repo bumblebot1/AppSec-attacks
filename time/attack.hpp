@@ -107,6 +107,20 @@ bool Attack::Verify(mpz_class sk) {
 }
 
 void Attack::Execute() {
+  /*
+    by running the 12862.R target using the test.cpp program i found that
+    every operation multiplication takes aproximately 3770 clock cycles 
+    and therefore I use this value to estimate the number of operations that
+    take place when performing operations using this key
+  */
+  long timePerOperation = 3770; 
+  long timeForSetBit = timePerOperation * 2;
+  mpz_class c(0), m(0), timeForChallenge(0);
+  Interact(c, m, timeForChallenge);
+  //this is the estimated number of multiplications performed using this key except the first bit
+  //i overestimate in order to account for possible noise due to the reductions that may be performed
+  mpz_class numOfOpsWithKey = (timeForChallenge - timeForSetBit) / timePerOperation + 3;
+
   Initialise(2000);
   while(!Verify(sk)) {
     mpz_class time1(0), time1red(0);
@@ -173,11 +187,11 @@ void Attack::Execute() {
     mpz_class diff_1 = time1 - time1red;
     mpz_abs(diff_1.get_mpz_t(), diff_1.get_mpz_t());
     if(diff_1 > diff_0) {
-      //guess 1
+      //guess 1 so decrease operations remaining count by 2
       secretKey.push_back(1);
       sk = sk * 2 + 1;
     } else if(diff_1 < diff_0) {
-      //guess 0
+      //guess 0 so decrease operations remaining count by 1
       secretKey.push_back(0);
       sk = sk * 2 + 0;
     } else {
@@ -193,7 +207,9 @@ void Attack::Execute() {
       break;
     }
   }
-  gmp_printf("The secret key is: %ZX\n", sk);
+  for(bool bit : secretKey) {
+    cout<<bit;
+  }
+  gmp_printf("\nThe secret key is: %ZX\n", sk);
 }
-
 #endif

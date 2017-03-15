@@ -3,3 +3,4 @@ all:
 	@g++ -o test -std=c++11 -O3 test.cpp -lgmp -lgmpxx -lcrypto
 clean :
 	@rm -f attack
+	@rm -f test
