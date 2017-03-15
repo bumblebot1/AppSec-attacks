@@ -1,13 +1,88 @@
 Q.1 Consider the parameters N = 3551, e = 5, d = 1373, and c = 888, all
     represented in decimal.  Use them to explain, in your own words, the
     principle of this attack (e.g., how and why it works).
+Q.1-ANS:
+    k = ceil(log(N,256)) = ceil(log(3551, 256)) = ceil(1.47) = 2
+    B = 2^(8*(k - 1)) mod N = 2^(8*1) mod N = 2^8 mod N = 256 mod 3551 = 256
+    It must be noted that the attack works only in the case where 2*B < N.
+    In our case 2*B = 512 < 3551 so this fact holds true.
+
+    The attacker has access to an oracle which given a valid cyphertext c returns wether the plaintext
+    x = c^d is smaller or greater than B (i.e x<B or x>=B).
+    The attacker wants to find the m which corresponds to c^d and therefore 
+    repeatedly queries the oracle with cyphertexts of the form f^e * c (mod N) and inteds to find the range
+    in which the corresponding plaintext f*m lies in:
+        error code 0: message decrypts so we found m = f*m (mod N);
+        error code 1: f*m is in [B, 2B) (">=B")
+        error code 2: f*m is in [0, B) ("<B")
+    By choosing multiples f' of f the attacker can reduce the range in which the cyphertext f'^e *c can lie in until 
+    it eventualy consists of a single value at which point he can recover m. 
+    
+    Step 1:
+    The attacker sets f_1 to powers of 2 (starting with 2,4,8,...,2^i,...) until the oracle returns ">= B"
+    For each f_1 the query mechanism is as follows:
+    Send: (f_1^e) * c mod N
+    Receive: errorcode
+    If the errorcode is 2 then (f_1^e*c)^d mod N <B so we set f_1=2*f_1 and try again.
+    When errorcode = 1 then f_1 is the smallest power of 2 such that (f_1^e*c)^d mod N >=B so we move to step 2;
+    In our case:
+        1)f_1 = 2 send: f_1^e * c (mod N) = 2^5 * 888 (mod N) = 32 * 888 mod 3551 = 8 
+          from oracle: 8^d mod N = 8^1373 mod 3551 = 246 < 256 = B
+        2)f_1 = 4 then f^e * c (mod N) = 4^5 * 888 (mod N) = 1024 * 888 mod 3551 = 256 
+          from oracle: 256^d mod N = 256 ^ 1373 mod 3551 = 492 >=256 = B
+          so we set f_1 = 4 and move to step 2.
+
+    Step 2:
+        f_2 = floor((N + B) / B) * f_1 / 2 = floor((3551 + 256) / 256) * 4 / 2 = 14 * 2 = 28
+
+        We now try f_2^e * c mod N with the oracle.
+        1)f_2 = 28: f_2^e * c (mod N) = 28 ^ 5 * 888 mod N = 2331
+        from oracle: 2331^1373 mod 3551 = 3444 >= B
+        therefore we set f_2 = f_2 + f_1/2 = 28 + 2 = 30
+        2)f_2 = 30: 30^e * c (mod N) = 30^5 * 888 mod N = 2790
+        from oracle: 2790^1373 mod 3551 = 139 < 256 = B so we move to step 3
+    
+    Step 3:
+        min = ceil(N / f_2) = ceil(3551 / 30) = 119
+        max = floor((N+B)/f_2) = floor((3551+256)/30) = 126
+        At this point we know m must lie between in the interval [min, max)
+        so the principle of this stage is similar to a binary search.
+        While min != max:
+        f_tmp = floor(2*B/(max - min))
+        i = floor(f_tmp * min / N)
+        f_3 = ceil(i*N / min)
+        send to oracle: f_3^e * c (mod N)
+        
+        1)f_tmp = floor(2*B/(max - min)) = floor(512 / (126-119)) = 73
+          i = floor(f_tmp * min / N) = 2
+          f_3 = ceil(i*N / min) = 60
+          Send to oracle: f_3^e * c (mod N) = 505
+          From oracle : 505^1373 mod N = 278 >= B
+          so min = ceil((i*N+B) / f_3) = 101
+          check 101 = 126? no so we go around the loop again
+        
+        2)f_tmp = floor(2*B/(max - min)) = floor(512 / (126-101)) = 20
+          i = floor(f_tmp * min / N) = 2
+          f_3 = ceil(i*N / min) = 60
+          Send to oracle: f_3^e * c (mod N) = 505
+          From oracle : 505^1373 mod N = 278 >= B
+          so min = ceil((i*N+B) / f_3) = 101
+          check 101 = 126? no so we go around the loop again
 
 Q.2 To prevent the attack, the vendor suggests altering the software: the
     idea is that no matter what error occurs, the same error code will be
     produced.  Explain whether (and why, or why not) this change alone is
     sufficient.
-Q.2-ANS: By returning the same error code no matter the error produced 
-    the decryption becomes immune to Manger's attack however timing attacks are still possible.
+Q.2-ANS: This attack works since the error codes reveal wether the cyphertext reached the OAEP decode phase or if 
+    it is too large. Sending the same error code would solve this issue as the attacker will no longer know if the
+    target has reached the OAEP decoding phase or not meaning he has no idea if the cyphertext corresponds to a message
+    which is larger than B. The system however can still be affected by timing attacks particularly if errors take
+    different amount of time to occur. For instance, if an error detected in the integer to octet conversion is reported
+    immediately it will occur faster than one in the OAEP phase which has the added overhead of applying the mask generation
+    function. This implies that the attacker could still apply this attack based on the timing of the errors rather than
+    on the error codes themselves. Therefore it is imperative that 1)errors codes are indistiguishable and 2)errors do not
+    occur with a significant difference in timing. Assuming these two conditions are satisfied, then this alteration would
+    be sufficient otherwise the system is still vulnerable to the attack.
 
 Q.4 This attack is based on the fact that decrypting a ciphertext of the
     form c = (f^e)*c' mod N produces a plaintext of the form f*m' mod N.
@@ -24,7 +99,7 @@ Q.4-ANS : This fact is due to the homomorphic property of the RSA encryption sch
     find that the plaintext obtained by decrypting c is in fact f*m' mod N
 
 Q.5 Explain how the concept of plaintext awareness relates to this attack.
-Q.5-ANS: Chose cyphertext attacks are normally ineffective against a plaintext aware cryptosystem.
+Q.5-ANS: Chosen cyphertext attacks are normally ineffective against a plaintext aware cryptosystem.
     In the case of RSAES-OEAP scheme, the design of the scheme makes it likely that information will be leaked
     between the decryption and integrity checking operations making the system susceptible to chosen cyphertext
     attacks such as Manger's attack.
