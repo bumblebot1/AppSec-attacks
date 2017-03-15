@@ -2,12 +2,56 @@ Q.1 The vendor of the attack target is concerned that news of this attack
     could scare off potential customers; they will make any alteration
     necessary (in software or hardware) to prevent the attack.  Explain the
     options they have, and which one you would recommend.
+Q.1-ANS: The following are some of the options available:
+    a)Perform the reduction regardless of the key bit which would lead to a constant
+      execution time. This would make the scheme immune to this particular attack
+      since the attack would not be able to exploit differences in execution time
+      owed to an extra reduction in the multiplication algorithm. Other timing attacks
+      may however still be possible.
+    b)Blind the data by exploiting the fact that RSA is a homomorphic scheme.
+      i.e when decrypting a cyphertext c by computing c^d follow these steps:
+        1)pick a random number r
+        2)calculate c' = c * (r^e) (mod N)
+        3)calculate m' = c'^d (mod N)
+        4)calculate m  = m' ^ (r^-1) (mod N)
+        In this case m'*(r^-1) = (c'^d)*(r^-1) = (c^d)*((r^e)^d)*(r^-1) = m*(r^(e*d))*(r^-1) = m*r*(r^-1) = m (mod N)
+        This process would make it hard for the attacker to simmulater the internal decryption
+        process so the attack would be ineffective.
+    c)By using chinese remainder theorem in the target this attack would be rendered 
+      ineffective since the attacker would not have knowledge of p and q and would 
+      not be able to simulate the internal computation of the target.
+    My personal recomendation would be option b) as, asuming a good source of randomness,
+    the time measurements even for the decryption of the same cyphertext would be different
+    thus ensuring that the attacker would not learn anything from the execution time.
+
 Q.2 The vendor of the attack target is concerned that a similar attack may
     also apply to their implementation of ElGamal encryption.  Explain the
     potential for such an attack, and how it differs wrt.  the case of RSA.
+Q.2-ANS: The ElGamal scheme would be vulnerable to a variant of this attack.
+    By targetting the square and multiply algorithm one could recover the 
+    private key by an attack similar to the one for RSA. The attack against ElGamal
+    would function as follows:
+    Let the public key be (G,g,q,h) where q is the order of G,
+    g is a generator of G and h = g^x where is x is the private key. Then the attacker
+    would randomly sample a set of values x1,x2,...,xk and send the cyphertexts
+    (g^x1
+
 Q.4 Numerous factors might produce noise within measurements of execution
     time: based on the given attack target and context, outline at least
     two examples.
+Q.4-ANS:
+    RAM temperature, cache hits and misses, network latency, disk access times  
+    are all examples which would affect the accuracy of the timing measurments.
+
 Q.8 Imagine you read a research paper that suggests a larger key (e.g.,
     2048-bit rather than 1024-bit) could help to prevent this attack.
     Explain whether and why you think this is right (or wrong).
+Q.8-ANS: Increasing the key length will slow down the recovery significantly in this case
+    since it is likely that a larger sample size will be needed to make accurate decisions for 
+    each bit in the key. Taking into account the fact that in the paper by Dhem et al. they were
+    able to recover keys of size 512 bits at a rate of 1bit per minute on a computer from 1998 I believe
+    it would be feasible for the attacker with current up to date hardware to achieve reasonable success
+    against a larger key of 2048 bits if a compromise on the sample size is made. Considering that 
+    the rate of 1bit per minute was achieved 
+    assuming the attacker has available recent hardware I believe it would be feasible
+    for the attack to work if  
