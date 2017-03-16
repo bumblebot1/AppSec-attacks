@@ -13,6 +13,9 @@
 
 using namespace std;
 
+/*
+ * @brief Constants to describe the relevant error codes returned by the target.
+ */
 #define NORESULT -1
 #define SUCCESS 0
 #define ERROR1 1
@@ -38,6 +41,13 @@ class Attack {
     void Execute();
 };
 
+/**
+ * @brief Constructor for the Attack Class.
+ *
+ * @param input  ifstream of the conf file.
+ * @param in     pointer to the stdin of the target.
+ * @param out    pointer to the stdout of the target.
+ */
 Attack::Attack(ifstream& input, FILE* in, FILE* out) {
   string line;
   getline(input, line);
@@ -60,6 +70,12 @@ Attack::Attack(ifstream& input, FILE* in, FILE* out) {
   target_out = out;
 }
 
+/**
+ * @brief Function to interact with the attack target
+ *        corresponding to the oracle queries in Manger's paper.
+ *
+ * @param f is an mpz_class object used to calculate (f^e) * c (mod N) which is the query to the oracle.
+ */
 int Attack::Oracle(mpz_class f) {
   mpz_class challenge(0);
 
@@ -81,6 +97,15 @@ int Attack::Oracle(mpz_class f) {
   throwErrorAndAbort("No error code returned from the Oracle!");  
 }
 
+/**
+ * @brief Function corresponding to Step1 of the attack described in the paper.
+ *
+ * f1 <- 2
+ * while query_oracle(f1) returns "<B"
+ *    f1 <- f1 * 2
+ *
+ * @return f1
+ */
 mpz_class Attack::Stage1() {
   mpz_class f1(2);
   int code = Oracle(f1);
@@ -97,6 +122,17 @@ mpz_class Attack::Stage1() {
   return f1;
 }
 
+/**
+ * @brief Function corresponding to Step2 of the attack described in the paper.
+ *
+ * @param f1  the value returned from Step1.
+ *
+ * f2 <- floor((N + B) / B) * (f1 / 2)
+ * while query_oracle(f2) returns ">=B"
+ *    f2 <- f2 + f1 / 2
+ *
+ * @return f2
+ */
 mpz_class Attack::Stage2(mpz_class f1) {
   mpz_class f1over2 = f1 / 2;
 
@@ -116,6 +152,25 @@ mpz_class Attack::Stage2(mpz_class f1) {
   return f2;
 }
 
+/**
+ * @brief Function corresponding to Step3 of the attack described in the paper.
+ *
+ * @param f2  the value returned from Step2.
+ *
+ * m_min <- ceil(N / f2)
+ * m_max <- floor((N + B) / f2)
+ * while m_min < m_max
+ *    ftmp <- floor(2 * B / (m_max - m_min))
+ *    i    <- floor(ftmp * m_min / N)
+ *    f3   <- ceil(i * N / m_min)
+ *    query_oracle(f3)
+ *    if ">=B" :
+ *      m_min <- ceil((i * N + B) / f3)
+ *    else if "< B" :
+ *      m_max <- floor((i * N + B) / f3)
+ *
+ * @return m_min (the actual value of the message that has been recovered)
+ */
 mpz_class Attack::Stage3(mpz_class f2) {
   mpz_class m_min, m_max;
   mpz_cdiv_q(m_min.get_mpz_t(), N.get_mpz_t(), f2.get_mpz_t());
@@ -141,6 +196,13 @@ mpz_class Attack::Stage3(mpz_class f2) {
   return m_min;
 }
 
+/**
+ * @brief Function which performs the OAEP decoding stage and recovers the actual plaintext.
+ *
+ * @param attackResult  the value obtained after running Step3.
+ *
+ * @return message  vector<unsigned char> the actual plaintext converted to octet string.
+ */
 vector<unsigned char> Attack::EME_OAEP_Decode(mpz_class attackResult) {
   //convert attackResult into octet string
   size_t len = mpz_sizeinbase(attackResult.get_mpz_t(), 256);
@@ -211,6 +273,9 @@ vector<unsigned char> Attack::EME_OAEP_Decode(mpz_class attackResult) {
   return message;
 }
 
+/**
+ * @brief Driver function which performs all the steps of the attack and prints any relevant output to stdout or sterr.
+ */
 void Attack::Execute() {
   mpz_class f1 = Stage1();
   mpz_class f2 = Stage2(f1);
@@ -226,8 +291,14 @@ void Attack::Execute() {
   cout<<"There were "<<interactionCount<<" interactions with the target."<<endl<<endl;
 }
 
+/**
+ * @brief Function which aborts execution and prints an error message to stderr.
+ *
+ * @param errorMessage  the error message to be printed to stderr
+ */
 void Attack::throwErrorAndAbort(string errorMessage) {
   cerr<<errorMessage<<endl;
   abort();
 }
+
 #endif
