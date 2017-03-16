@@ -27,6 +27,7 @@ class Attack {
     FILE* target_in;
     FILE* target_out;
     unsigned long interactionCount;
+    void (*cleanup)(int s);
   
   private:
     int Oracle(mpz_class challenge);
@@ -37,7 +38,7 @@ class Attack {
     void throwErrorAndAbort(string errorMessage);
   
   public:
-    Attack(ifstream& input, FILE* in, FILE* out);
+    Attack(ifstream& input, FILE* in, FILE* out, void (*clean)(int s));
     void Execute();
 };
 
@@ -47,8 +48,9 @@ class Attack {
  * @param input  ifstream of the conf file.
  * @param in     pointer to the stdin of the target.
  * @param out    pointer to the stdout of the target.
+ * @param clean  the cleanup function to be invoked on abnormal exit.
  */
-Attack::Attack(ifstream& input, FILE* in, FILE* out) {
+Attack::Attack(ifstream& input, FILE* in, FILE* out, void (*clean)(int s)) {
   string line;
   getline(input, line);
   gmp_sscanf(line.c_str(), "%ZX", N);
@@ -68,6 +70,7 @@ Attack::Attack(ifstream& input, FILE* in, FILE* out) {
 
   target_in  = in;
   target_out = out;
+  cleanup = clean;
 }
 
 /**
@@ -298,7 +301,7 @@ void Attack::Execute() {
  */
 void Attack::throwErrorAndAbort(string errorMessage) {
   cerr<<errorMessage<<endl;
-  abort();
+  cleanup(-1);
 }
 
 #endif

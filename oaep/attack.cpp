@@ -62,7 +62,7 @@ int main(int argc, char* argv[]) {
     }
   }
   ifstream input(argv[2], ifstream::in);
-  Attack attackInstance(input, target_in, target_out);
+  Attack attackInstance(input, target_in, target_out, cleanup);
   attackInstance.Execute();
 
   cleanup(SIGINT);
