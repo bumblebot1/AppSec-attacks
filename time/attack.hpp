@@ -31,7 +31,7 @@ class Attack {
     vector<vector<mpz_class>> temp_cs_0, temp_cs_1;
     mpz_class cypherVerify{4324585884327}, plaintextVerify;
     vector<bool> secretKey;
-    mpz_class sk{1};
+    mpz_class sk;
     gmp_randclass randomGenerator{gmp_randinit_default};
     Montgomery montgomeryInstance;
     FILE* target_in;
@@ -52,7 +52,6 @@ Attack::Attack(ifstream& input, FILE* in, FILE* out) {
   target_in  = in;
   target_out = out;
 
-  cypherVerify = mpz_class(4324585884327);
   mpz_class currTime(0);
   Interact(cypherVerify, plaintextVerify, currTime);
 }
@@ -72,8 +71,6 @@ void Attack::Interact(mpz_class cypherText, mpz_class &plainText, mpz_class &cur
 void Attack::Initialise(int count) {
   omega = montgomeryInstance.GetOmega(N.get_mpz_t());
   montgomeryInstance.GetRhoSquared(rhoSquared.get_mpz_t(), N.get_mpz_t());
-  temp_cs_0[0].resize(count);
-  temp_cs_1[0].resize(count);
   for(int i = 0; i < count; i++) {
     mpz_class c    = randomGenerator.get_z_range(N);
     mpz_class time(0), plainText(0);
@@ -84,22 +81,21 @@ void Attack::Initialise(int count) {
     sampleTimes.push_back(time);
 
     montgomeryInstance.Multiplication(c.get_mpz_t(), c.get_mpz_t(), c.get_mpz_t(), omega, N.get_mpz_t());
-    temp_cs_1[0][i] = c;
-    temp_cs_0[0][i] = 0;
+    temp_cs_1[0].push_back(c);
+    temp_cs_0[0].push_back(0);
   }
   secretKey.clear();
   secretKey.push_back(true);
+  sk = 1;
 }
 
 void Attack::throwErrorAndAbort(string errorMessage) {
-  printf("here\n");
   cerr<<errorMessage<<endl;
   abort();
 }
 
 bool Attack::Verify(mpz_class sk) {
   mpz_class m;
-
   mpz_powm(m.get_mpz_t(), cypherVerify.get_mpz_t(), sk.get_mpz_t(), N.get_mpz_t());
   if(m == plaintextVerify){
     return true;
@@ -115,22 +111,33 @@ void Attack::Execute() {
     and therefore I use this value to estimate the number of operations that
     take place when performing operations using this key
   */
-  long timePerOperation = 3770; 
-  long timeForSetBit = timePerOperation * 2;
+  unsigned long timePerOperation(3770), timeForSetBit(timePerOperation * 2);
   mpz_class c(0), m(0), timeForChallenge(0);
   Interact(c, m, timeForChallenge);
   //this is the estimated number of multiplications performed using this key except the first bit
-  //i overestimate in order to account for possible noise due to the reductions that may be performed
-  mpz_class numOfOpsWithKey = (timeForChallenge - timeForSetBit) / timePerOperation;
+  //I try to overestimate in order to account for possible noise due to the reductions that may be performed
+  //during the computation
+  mpz_class numOfOpsWithKey = (timeForChallenge - timeForSetBit);
+  mpz_cdiv_q_ui(numOfOpsWithKey.get_mpz_t(), numOfOpsWithKey.get_mpz_t(), timePerOperation) ;
   temp_cs_0.resize(numOfOpsWithKey.get_ui());
   temp_cs_1.resize(numOfOpsWithKey.get_ui());
-  gmp_printf("\nTotal number of ops allowed: %Zd\n", numOfOpsWithKey);
-  mpz_class currentOpsPerformed(0);
-  int currBit = 1;
+  gmp_printf("Estimated number of multiplications during decryption: %Zd\n", numOfOpsWithKey);
+  mpz_class currentOpsPerformed(2);
+  
+  int currBit(1);
+  bool backtracked (false), resample(false);
 
   Initialise(2000);
   while(!Verify(sk) && numOfOpsWithKey > currentOpsPerformed) {
-    cout<<"iteration"<<endl;
+    if(resample) {
+      cout<<"Resampling at bit: "<<currBit<<endl;
+      Initialise(500);
+      resample = false;
+      backtracked = false;
+      currBit = 1;
+      currentOpsPerformed = 2;
+      secretKey.resize(1);
+    }
     mpz_class time1(0), time1red(0);
     int time1_count(0), time1red_count(0); // counters
     
@@ -138,7 +145,7 @@ void Attack::Execute() {
     int time0_count(0), time0red_count(0); // counters
     temp_cs_0[currBit].resize(sampleCyphers.size());
     temp_cs_1[currBit].resize(sampleCyphers.size());
-    for(int i = 0; i < sampleCyphers.size(); i++) {
+    for(int i = 0; i < sampleCyphers.size(); i ++) {
       mpz_class curr, prev;
       mpz_class currentTime = sampleTimes[i];
       if(secretKey.back()) {
@@ -196,36 +203,62 @@ void Attack::Execute() {
     mpz_abs(diff_1.get_mpz_t(), diff_1.get_mpz_t());
     mpz_class totalDiff = diff_0 - diff_1;
     mpz_abs(totalDiff.get_mpz_t(), totalDiff.get_mpz_t());
-    if(totalDiff > 1) {
+    if(totalDiff > 10) {
       if(diff_1 > diff_0) {
         //guess 1 so decrease operations remaining count by 2
         secretKey.push_back(1);
-        sk = sk * 2 + 1;
+        sk = (sk << 1) + 1;
+        currentOpsPerformed += 2;
       } else {
         //guess 0 so decrease operations remaining count by 1
         secretKey.push_back(0);
-        sk = sk * 2 + 0;
+        sk = (sk << 1);
+        currentOpsPerformed += 1;
       }
     } else {
-      cout<<"confidence too weak so die"<<endl;
-      abort();
-      Initialise(1000);
+      if(backtracked) {
+        //resample if already backtracked
+        resample = true;
+        continue;
+      } else{
+        //do the backtracking
+        cout<<"Backtracking at bit: "<<currBit<<endl;
+        currBit--;
+        backtracked = true;
+        if(secretKey.back()) {
+          secretKey.pop_back();
+          secretKey.push_back(0);
+          currentOpsPerformed -= 1;
+        } else {
+          secretKey.pop_back();
+          secretKey.push_back(1);
+          currentOpsPerformed += 1;
+        }
+      }
+    }
+    
+    if(Verify((sk << 1) + 1)) {
+      sk = (sk << 1) + 1;
+      secretKey.push_back(1);
+      currentOpsPerformed += 2;
+      break;
     }
 
     if(Verify(sk << 1)) {
       sk = sk << 1;
+      secretKey.push_back(0);
+      currentOpsPerformed += 1;
       break;
     }
-    if(Verify((sk << 1) + 1)) {
-      sk = (sk << 1) + 1;
-      break;
-    }
+
     currBit++;
   }
+  cout<<endl<<"The binary representation of the secret key is:"<<endl;
   for(bool bit : secretKey) {
     cout<<bit;
   }
   gmp_printf("\nThe secret key is: %ZX\n", sk);
-  gmp_printf("\nNumber of ops performed %Zd\n", currentOpsPerformed);
+  cout<<"Number of interactions with the oracle is: "<<interactionCount<<endl;
+  gmp_printf("\nActual number of arithmetic ops performed during a decryption: %Zd\n", currentOpsPerformed);
 }
 #endif
