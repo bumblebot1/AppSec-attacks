@@ -37,7 +37,6 @@ void Montgomery::Multiplication(mpz_t res, mpz_t x, mpz_t y, mp_limb_t omega, mp
   }
   
   mpz_swap(res, r);
-  mpz_clear(r);
 }
 
 /**
@@ -119,9 +118,6 @@ void Montgomery::Reduce(mpz_t res, mpz_t t, mp_limb_t omega, mpz_t N) {
     mpz_sub(r,r,N);
   }
   mpz_swap(res, r);
-
-  mpz_clear(r);
-  mpz_clear(temp);
 }
 
 #endif
