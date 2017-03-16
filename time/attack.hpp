@@ -27,7 +27,8 @@ class Attack {
   private:
     mpz_class N, e, testMessage, rhoSquared;
     mp_limb_t omega;
-    vector<mpz_class> sampleCyphers,sampleTimes,samplePlaintexts, temp_cs_0, temp_cs_1;
+    vector<mpz_class> sampleCyphers,sampleTimes,samplePlaintexts;
+    vector<vector<mpz_class>> temp_cs_0, temp_cs_1;
     mpz_class cypherVerify{4324585884327}, plaintextVerify;
     vector<bool> secretKey;
     mpz_class sk{1};
@@ -71,7 +72,8 @@ void Attack::Interact(mpz_class cypherText, mpz_class &plainText, mpz_class &cur
 void Attack::Initialise(int count) {
   omega = montgomeryInstance.GetOmega(N.get_mpz_t());
   montgomeryInstance.GetRhoSquared(rhoSquared.get_mpz_t(), N.get_mpz_t());
-
+  temp_cs_0[0].resize(count);
+  temp_cs_1[0].resize(count);
   for(int i = 0; i < count; i++) {
     mpz_class c    = randomGenerator.get_z_range(N);
     mpz_class time(0), plainText(0);
@@ -82,8 +84,8 @@ void Attack::Initialise(int count) {
     sampleTimes.push_back(time);
 
     montgomeryInstance.Multiplication(c.get_mpz_t(), c.get_mpz_t(), c.get_mpz_t(), omega, N.get_mpz_t());
-    temp_cs_1.push_back(c);
-    temp_cs_0.push_back(0);
+    temp_cs_1[0][i] = c;
+    temp_cs_0[0][i] = 0;
   }
   secretKey.clear();
   secretKey.push_back(true);
@@ -119,24 +121,31 @@ void Attack::Execute() {
   Interact(c, m, timeForChallenge);
   //this is the estimated number of multiplications performed using this key except the first bit
   //i overestimate in order to account for possible noise due to the reductions that may be performed
-  mpz_class numOfOpsWithKey = (timeForChallenge - timeForSetBit) / timePerOperation + 3;
+  mpz_class numOfOpsWithKey = (timeForChallenge - timeForSetBit) / timePerOperation;
+  temp_cs_0.resize(numOfOpsWithKey.get_ui());
+  temp_cs_1.resize(numOfOpsWithKey.get_ui());
+  gmp_printf("\nTotal number of ops allowed: %Zd\n", numOfOpsWithKey);
+  mpz_class currentOpsPerformed(0);
+  int currBit = 1;
 
   Initialise(2000);
-  while(!Verify(sk)) {
+  while(!Verify(sk) && numOfOpsWithKey > currentOpsPerformed) {
+    cout<<"iteration"<<endl;
     mpz_class time1(0), time1red(0);
     int time1_count(0), time1red_count(0); // counters
     
     mpz_class time0(0), time0red(0);
     int time0_count(0), time0red_count(0); // counters
-
+    temp_cs_0[currBit].resize(sampleCyphers.size());
+    temp_cs_1[currBit].resize(sampleCyphers.size());
     for(int i = 0; i < sampleCyphers.size(); i++) {
       mpz_class curr, prev;
       mpz_class currentTime = sampleTimes[i];
       if(secretKey.back()) {
         //previous bit of the key is 1
-        prev = temp_cs_1[i];
+        prev = temp_cs_1[currBit - 1][i];
       } else {
-        prev = temp_cs_0[i];
+        prev = temp_cs_0[currBit - 1][i];
       }
 
       //last bit is 0 so square only
@@ -149,8 +158,8 @@ void Attack::Execute() {
         time0 += currentTime;
         time0_count ++;
       }
+      temp_cs_0[currBit][i] = curr;
 
-      temp_cs_0[i] = curr;
 
       montgomeryInstance.Multiplication(curr.get_mpz_t(), prev.get_mpz_t(), sampleCyphers[i].get_mpz_t(), omega, N.get_mpz_t());
       if(curr >= N) {
@@ -165,8 +174,7 @@ void Attack::Execute() {
         time1 += currentTime;
         time1_count ++;
       }
-
-      temp_cs_1[i] = curr;
+      temp_cs_1[currBit][i] = curr;
     }
 
     if(time1_count != 0) {
@@ -186,18 +194,24 @@ void Attack::Execute() {
     mpz_abs(diff_0.get_mpz_t(), diff_0.get_mpz_t());
     mpz_class diff_1 = time1 - time1red;
     mpz_abs(diff_1.get_mpz_t(), diff_1.get_mpz_t());
-    if(diff_1 > diff_0) {
-      //guess 1 so decrease operations remaining count by 2
-      secretKey.push_back(1);
-      sk = sk * 2 + 1;
-    } else if(diff_1 < diff_0) {
-      //guess 0 so decrease operations remaining count by 1
-      secretKey.push_back(0);
-      sk = sk * 2 + 0;
+    mpz_class totalDiff = diff_0 - diff_1;
+    mpz_abs(totalDiff.get_mpz_t(), totalDiff.get_mpz_t());
+    if(totalDiff > 1) {
+      if(diff_1 > diff_0) {
+        //guess 1 so decrease operations remaining count by 2
+        secretKey.push_back(1);
+        sk = sk * 2 + 1;
+      } else {
+        //guess 0 so decrease operations remaining count by 1
+        secretKey.push_back(0);
+        sk = sk * 2 + 0;
+      }
     } else {
-      cout<<"can't distinguish this bit so add more samples"<<endl;
+      cout<<"confidence too weak so die"<<endl;
+      abort();
       Initialise(1000);
     }
+
     if(Verify(sk << 1)) {
       sk = sk << 1;
       break;
@@ -206,10 +220,12 @@ void Attack::Execute() {
       sk = (sk << 1) + 1;
       break;
     }
+    currBit++;
   }
   for(bool bit : secretKey) {
     cout<<bit;
   }
   gmp_printf("\nThe secret key is: %ZX\n", sk);
+  gmp_printf("\nNumber of ops performed %Zd\n", currentOpsPerformed);
 }
 #endif
