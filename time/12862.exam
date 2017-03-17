@@ -13,11 +13,11 @@ Q.1-ANS: The following are some of the options available:
         1)pick a random number r
         2)calculate c' = c * (r^e) (mod N)
         3)calculate m' = c'^d (mod N)
-        4)calculate m  = m' ^ (r^-1) (mod N)
+        4)calculate m  = m' * (r^-1) (mod N)
         In this case m'*(r^-1) = (c'^d)*(r^-1) = (c^d)*((r^e)^d)*(r^-1) = m*(r^(e*d))*(r^-1) = m*r*(r^-1) = m (mod N)
         This process would make it hard for the attacker to simmulate the internal decryption
         process so this attack would be ineffective.
-    c)By using chinese remainder theorem in the target this attack would be rendered 
+    c)By using the chinese remainder theorem in the target this attack would be rendered 
       ineffective if the attacker does not have knowledge of p and q because he would 
       not be able to simulate the internal computation of the target.
     My personal recomendation would be option b) as, asuming a good source of randomness,
@@ -29,7 +29,7 @@ Q.2 The vendor of the attack target is concerned that a similar attack may
     potential for such an attack, and how it differs wrt. the case of RSA.
 Q.2-ANS: 
     It should be noted that, as stated in the paper, this attack does not necessarily apply just to RSA but in fact 
-    it can be used to attack many cryptosystems which perform modular exponentiation with the private key as the exponent
+    it can be used to attack most cryptosystems which perform modular exponentiation with the private key as the exponent
     in the decryption phase.
     The ElGamal encryption scheme would be vulnerable to a variant of this attack.
     By targetting the square and multiply exponentiation algorithm one could recover the
@@ -41,19 +41,19 @@ Q.2-ANS:
     We assume the attacker chooses a number y and a set of numbers r1,r2,...,rk at random. 
     For each of the r's he computes the associated cyphertext (g^y, ri * h^y).
     He then proceeds in a similar manner to the RSA attack. He queries the target for the 
-    time take to decrypt each of the newly generated cyphertexts and them attempts to guess every bit in the private
+    time take to decrypt each of the newly generated cyphertexts and then attempts to guess every bit in the private
     key 1 by 1 by emulating the decryption himself. This proceeds almost entirely the same as in the RSA attack since 
     the attacker, given a cyphertext (c1,c2), still needs to compute c1^d (where d = -x the private key) so he can 
     either attack the square or the multiplication exactly the same way as in the original attack. The only difference 
     vs. the original attack is the added overhead of the final multiplication (c1^-x)*c2 in the decryption time measurements but given that this 
-    operation is performed for all cyphertexts no matter the key and has a much smaller overhead compared to the exponentiation 
+    operation is performed for all cyphertexts no matter the key and that it has a much smaller overhead compared to the exponentiation 
     we can ignore its effects on the time measurements although it does add some noise to these.
 
 Q.4 Numerous factors might produce noise within measurements of execution
     time: based on the given attack target and context, outline at least
     two examples.
 Q.4-ANS:
-    RAM temperature, cache hits and misses, network latency, disk access times  
+    Network latency, disk access times, cache hits and misses, RAM temperature  
     are all examples of factors which would affect the accuracy of the timing measurments.
 
 Q.8 Imagine you read a research paper that suggests a larger key (e.g.,
@@ -66,11 +66,16 @@ Q.8-ANS: My opinion is that this statement is wrong and that as long as a relati
     where j is the length in bits of e. Lets assume we produce a sample size of k cyphertexts which 
     we use to make our decisions on each bit. Then we will perform O(3*j*k) multiplication operations
     since we will perform 3 multiplications for every bit in the key corresponding to the 2 cases
-    and we will do so for each of the k cyphertexts. Furthermore in the same paper the table at the bottom
+    and we will do so for each of the k cyphertexts. Furthermore, in the same paper, the table at the bottom
     shows that a single multiplication for 2 2048 bit numbers takes roughly 4 ms on hardware from 1996 (when using asm instructions).
     Assuming our modulus is also 2048 we can assume each multiplication will take at most 5 ms. Next let's assume we have chosen k = 4000
     i.e we have 4000 randomly chosen cyphertexts to aid us in our attack. We can expect to perform around
     3 * 2048 *4000 multiplications meaning approximately 24 million multiplication operations. This would take
-    about 96000 seconds or roughly 26 hours. 
-
-    (same as in the )
+    about 96000 seconds or roughly 26 hours. This could be reduced by making the number of randomly chosen cyphertexts smaller although at the
+    cost of lower confidence in making the decisions for each bit. Even considering that we may have to restart the process at some points
+    the success of the attack is still feasible if the key is long lived. If the key is used for only short periods of time
+    this becomes a problem and the attack would no longer be effective.
+    Lastly, it may not even be necessary that the attack recovers the entire key as new techniques have been developped in order
+    to recover the private key when knowing around 60% of the bits in the key with high probability. 
+    Therefore, my opinion is that if we want to increase the key length in order to provide more security we would need at least 3072 bits 
+    however, in order to guard against this attack, there are other much more effective measures that should be taken as pointed in Q1. 

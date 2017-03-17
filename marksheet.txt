@@ -83,7 +83,8 @@ source code) should go here:
 [
   I have implemented both attacks in C++. I initially started an implementation 
   in python of the oaep attack but I found it to be fairly slow so I switched 
-  to c++.
+  to c++. My program uses -std=c++11 option. I have tested with version 5.4.0 of g++
+  and the version of the gmp library I have used in my development was 6.1.0
 
   Error messages are printed to stderr and only the attack results are printed
   to stdout.

@@ -35,6 +35,7 @@ Q.1-ANS:
           so we set f_1 = 4 and move to step 2.
 
     Step 2:
+        We now look for f_2 such that f_2*m is in [n, n+B)
         f_2 = floor((N + B) / B) * f_1 / 2 = floor((3551 + 256) / 256) * 4 / 2 = 14 * 2 = 28
 
         We now try f_2^e * c mod N with the oracle.
@@ -52,17 +53,17 @@ Q.1-ANS:
         
         1)f_tmp = floor(2*B/(max - min)) = floor(512 / (126-119)) = 73
           i = floor(f_tmp * min / N) = 2
-          f_3 = ceil(i*N / min) = 60
+          f_3 = ceil(i*N / min) = 60 we now know that f3*m is in [i*n, i*n + 2B)
           Send to oracle: f_3^e * c (mod N) = 505
-          From oracle : 505^1373 mod N = 278 >= B
-          so min = ceil((i*N+B) / f_3) = 123
+          From oracle : 505^1373 mod N = 278 >= B so f_3*m is in [i*n + B, i*n + 2B)
+          so min = ceil((i*N+B) / f_3) = 123 
           check 123 = 126? no so we go around the loop again
         
         2)f_tmp = floor(2*B/(max - min)) = floor(512 / (126-123)) = 170
           i = floor(f_tmp * min / N) = 5
           f_3 = ceil(i*N / min) = 145
           Send to oracle: f_3^e * c (mod N) = 1118
-          From oracle : 1118^1373 mod N = 80 < B
+          From oracle : 1118^1373 mod N = 80 < B so f_3 * m is in [i*n, i*n + B)
           so max = floor((i*N+B) / f_3) = 124
           check 123 = 124? no so we go around the loop again
         
