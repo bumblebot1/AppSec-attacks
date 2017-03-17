@@ -16,7 +16,7 @@
 So that we can calibrate and improve the assignment in the future, give us
 a rough idea how long (in hours) you spent on it *in total*:
 
-effort : [...] hours
+effort : [40] hours
 
 -------------------------------------------------------------------------------
 
@@ -41,14 +41,14 @@ outside this list can warrant an increase/decrease in marks, with examples
 including hard to quantify features such as the efficiency, robustness, 
 generality, realism, or style of a solution.
 
-[?] Stage 1 : an attack based on error messages
+[X] Stage 1 : an attack based on error messages
               - correct target material                              ( 40%)
               - solution quality wrt. efficiency, robustness etc.    ( 30%)
               - analysis questions                                   ( 30%)
 
               target material : [EE5165F51491D0A1503C6C71CABFFC178CA69973186312A92BB2BD53CFE9771BD9502FA0B216527AB6711049A7855337C0B3E1358DE40DAD3CA7BC0DA42BFD2E55696335BE756A8FD053FBD2BA776D4E0B588379F39123D31FD6FED2BEA931BB3C283B62651C328B427BC25FE07961990B918BA303152846ED983D90E6070F]
 
-[?] Stage 2 : an attack based on execution time
+[X] Stage 2 : an attack based on execution time
               - correct target material                              ( 40%)
               - solution quality wrt. efficiency, robustness etc.    ( 30%)
               - analysis questions                                   ( 30%)
@@ -85,6 +85,9 @@ source code) should go here:
   in python of the oaep attack but I found it to be fairly slow so I switched 
   to c++.
 
+  Error messages are printed to stderr and only the attack results are printed
+  to stdout.
+
   The OAEP attack follows Manger's paper. I have also implemented the EME-OAEP
   decode function in order to recover the actual unpacked plaintext.
   I have not covered the case for when 2*B>=N so that would be one improvement
@@ -100,7 +103,7 @@ source code) should go here:
   decisions. This could be improved by allowing backtracking for lengths larger
   than 1 bit which could improve performance when attacking very large keys since 
   you would not have to stop mid-way so frequently and restart the process.
-  In order to distinguish between 0 or 1 I used the absolute value of the 
+  In order to distinguish between 0 and 1 I used the absolute value of the 
   difference of the means. The way I am doing this is by having a threshold in place: 
   if the absolute value of the difference is smaller than the threshold then I backtrack or 
   restart the attack from the beggining, otherwise I predict the class with the larger mean.
