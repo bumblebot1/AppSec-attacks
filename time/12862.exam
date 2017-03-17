@@ -59,12 +59,18 @@ Q.4-ANS:
 Q.8 Imagine you read a research paper that suggests a larger key (e.g.,
     2048-bit rather than 1024-bit) could help to prevent this attack.
     Explain whether and why you think this is right (or wrong).
-Q.8-ANS: Increasing the key length will slow down the recovery significantly in this case
-    since it is likely that a larger sample size will be needed to make accurate decisions for 
-    each bit in the key. Taking into account the fact that in the paper by Dhem et al. they were
-    able to recover keys of size 512 bits at a rate of 1bit per minute on a computer from 1998 I believe
-    it would be feasible for the attacker with current up to date hardware to achieve reasonable success
-    against a larger key of 2048 bits if a compromise on the sample size is made. Considering that 
-    the rate of 1bit per minute was achieved 
-    assuming the attacker has available recent hardware I believe it would be feasible
-    for the attack to work if  
+Q.8-ANS: My opinion is that this statement is wrong and that as long as a relatively efficient
+    algorithm is used for the exponentiation and multiplication then a 2048 bits key should be recoverable.
+    Let's assume we use the square and multiply algorithm with Montgomery form multiplication.
+    As stated in the paper by Koç et al. we need O(j) multiplications in order to raise x^e 
+    where j is the length in bits of e. Lets assume we produce a sample size of k cyphertexts which 
+    we use to make our decisions on each bit. Then we will perform O(3*j*k) multiplication operations
+    since we will perform 3 multiplications for every bit in the key corresponding to the 2 cases
+    and we will do so for each of the k cyphertexts. Furthermore in the same paper the table at the bottom
+    shows that a single multiplication for 2 2048 bit numbers takes roughly 4 ms on hardware from 1996 (when using asm instructions).
+    Assuming our modulus is also 2048 we can assume each multiplication will take at most 5 ms. Next let's assume we have chosen k = 4000
+    i.e we have 4000 randomly chosen cyphertexts to aid us in our attack. We can expect to perform around
+    3 * 2048 *4000 multiplications meaning approximately 24 million multiplication operations. This would take
+    about 96000 seconds or roughly 26 hours. 
+
+    (same as in the )
