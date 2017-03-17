@@ -179,7 +179,7 @@ mpz_class Attack::Stage3(mpz_class f2) {
   mpz_cdiv_q(m_min.get_mpz_t(), N.get_mpz_t(), f2.get_mpz_t());
   m_max = (N + B) / f2;
 
-  while(mpz_cmp(m_min.get_mpz_t(), m_max.get_mpz_t()) != 0) {
+  while(mpz_cmp(m_max.get_mpz_t(), m_min.get_mpz_t()) >= 1) {
     mpz_class ftmp = 2 * B / (m_max - m_min);
     mpz_class i = (ftmp * m_min) / N;
     mpz_class i_N = i * N;

@@ -16,7 +16,9 @@ Q.1-ANS:
         error code 1: f*m is in [B, 2B) (">=B")
         error code 2: f*m is in [0, B) ("<B")
     By choosing multiples f' of f the attacker can reduce the range in which the cyphertext f'^e *c can lie in until 
-    it eventualy consists of a single value at which point he can recover m. 
+    it eventualy consists of a single value at which point he can recover m.
+    The attacker needs to choose 3 f's throughout this attack. f_1 which is a multiple of 2; f_2 such that f_2*m is in [n, n+B)
+    and f_3 such that f_3*m is in an aproximately 2B wide range.
     
     Step 1:
     The attacker sets f_1 to powers of 2 (starting with 2,4,8,...,2^i,...) until the oracle returns ">= B"
@@ -45,29 +47,33 @@ Q.1-ANS:
     Step 3:
         min = ceil(N / f_2) = ceil(3551 / 30) = 119
         max = floor((N+B)/f_2) = floor((3551+256)/30) = 126
-        At this point we know m must lie between in the interval [min, max)
+        At this point we know m must lie in the interval [min, max)
         so the principle of this stage is similar to a binary search.
-        While min != max:
-        f_tmp = floor(2*B/(max - min))
-        i = floor(f_tmp * min / N)
-        f_3 = ceil(i*N / min)
-        send to oracle: f_3^e * c (mod N)
         
         1)f_tmp = floor(2*B/(max - min)) = floor(512 / (126-119)) = 73
           i = floor(f_tmp * min / N) = 2
           f_3 = ceil(i*N / min) = 60
           Send to oracle: f_3^e * c (mod N) = 505
           From oracle : 505^1373 mod N = 278 >= B
-          so min = ceil((i*N+B) / f_3) = 101
-          check 101 = 126? no so we go around the loop again
+          so min = ceil((i*N+B) / f_3) = 123
+          check 123 = 126? no so we go around the loop again
         
-        2)f_tmp = floor(2*B/(max - min)) = floor(512 / (126-101)) = 20
-          i = floor(f_tmp * min / N) = 2
-          f_3 = ceil(i*N / min) = 60
-          Send to oracle: f_3^e * c (mod N) = 505
-          From oracle : 505^1373 mod N = 278 >= B
-          so min = ceil((i*N+B) / f_3) = 101
-          check 101 = 126? no so we go around the loop again
+        2)f_tmp = floor(2*B/(max - min)) = floor(512 / (126-123)) = 170
+          i = floor(f_tmp * min / N) = 5
+          f_3 = ceil(i*N / min) = 145
+          Send to oracle: f_3^e * c (mod N) = 1118
+          From oracle : 1118^1373 mod N = 80 < B
+          so max = floor((i*N+B) / f_3) = 124
+          check 123 = 124? no so we go around the loop again
+        
+        3)f_tmp = floor(2*B/(max - min)) = floor(512 / (124-123)) = 512
+          i = floor(f_tmp * min / N) = 17
+          f_3 = ceil(i*N / min) = 491
+          Send to oracle: f_3^e * c (mod N) = 3281
+          From oracle : 3281^1373 mod N = 26 < B
+          so max = floor((i*N+B) / f_3) = 123
+          check 123 = 123? yes so we have found m = min = max
+          and indeed if we check 123^5 mod 3551 we get 888 = c so m = 123 and we are done.
 
 Q.2 To prevent the attack, the vendor suggests altering the software: the
     idea is that no matter what error occurs, the same error code will be
