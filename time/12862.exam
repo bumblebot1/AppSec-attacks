@@ -54,7 +54,7 @@ Q.4 Numerous factors might produce noise within measurements of execution
     two examples.
 Q.4-ANS:
     RAM temperature, cache hits and misses, network latency, disk access times  
-    are all examples which would affect the accuracy of the timing measurments.
+    are all examples of factors which would affect the accuracy of the timing measurments.
 
 Q.8 Imagine you read a research paper that suggests a larger key (e.g.,
     2048-bit rather than 1024-bit) could help to prevent this attack.
