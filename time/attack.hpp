@@ -272,13 +272,13 @@ void Attack::Execute() {
     sk = (sk - 1) >> 1;
     currBit++;
   }
-  cout<<endl<<"The binary representation of the secret key is:"<<endl;
+  gmp_printf("Actual number of arithmetic ops performed during a decryption: %Zd\n", currentOpsPerformed);
+  cout<<endl<<endl<<"The binary representation of the secret key is:"<<endl;
   for(bool bit : secretKey) {
     cout<<bit;
   }
   gmp_printf("\nThe secret key is: %ZX\n", sk);
-  cout<<"Number of interactions with the oracle is: "<<interactionCount<<endl;
-  gmp_printf("\nActual number of arithmetic ops performed during a decryption: %Zd\n", currentOpsPerformed);
+  cout<<"Number of interactions with the target is: "<<interactionCount<<endl;
 }
 
 /**
