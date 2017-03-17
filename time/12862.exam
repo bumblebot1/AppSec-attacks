@@ -15,26 +15,39 @@ Q.1-ANS: The following are some of the options available:
         3)calculate m' = c'^d (mod N)
         4)calculate m  = m' ^ (r^-1) (mod N)
         In this case m'*(r^-1) = (c'^d)*(r^-1) = (c^d)*((r^e)^d)*(r^-1) = m*(r^(e*d))*(r^-1) = m*r*(r^-1) = m (mod N)
-        This process would make it hard for the attacker to simmulater the internal decryption
-        process so the attack would be ineffective.
+        This process would make it hard for the attacker to simmulate the internal decryption
+        process so this attack would be ineffective.
     c)By using chinese remainder theorem in the target this attack would be rendered 
-      ineffective since the attacker would not have knowledge of p and q and would 
+      ineffective if the attacker does not have knowledge of p and q because he would 
       not be able to simulate the internal computation of the target.
     My personal recomendation would be option b) as, asuming a good source of randomness,
     the time measurements even for the decryption of the same cyphertext would be different
     thus ensuring that the attacker would not learn anything from the execution time.
 
 Q.2 The vendor of the attack target is concerned that a similar attack may
-    also apply to their implementation of ElGamal encryption.  Explain the
-    potential for such an attack, and how it differs wrt.  the case of RSA.
-Q.2-ANS: The ElGamal scheme would be vulnerable to a variant of this attack.
-    By targetting the square and multiply algorithm one could recover the 
-    private key by an attack similar to the one for RSA. The attack against ElGamal
+    also apply to their implementation of ElGamal encryption. Explain the
+    potential for such an attack, and how it differs wrt. the case of RSA.
+Q.2-ANS: 
+    It should be noted that, as stated in the paper, this attack does not necessarily apply just to RSA but in fact 
+    it can be used to attack many cryptosystems which perform modular exponentiation with the private key as the exponent
+    in the decryption phase.
+    The ElGamal encryption scheme would be vulnerable to a variant of this attack.
+    By targetting the square and multiply exponentiation algorithm one could recover the
+    private key by an attack almost identic to the one for RSA. The attack against ElGamal
     would function as follows:
     Let the public key be (G,g,q,h) where q is the order of G,
-    g is a generator of G and h = g^x where is x is the private key. Then the attacker
-    would randomly sample a set of values x1,x2,...,xk and send the cyphertexts
-    (g^x1
+    g is a generator of G and h = g^x where is x is the private key(we will attempt to recover -x however 
+    since x is part of the integers mod q group we can simply recover x by calculating (q - (-x) mod q)).
+    We assume the attacker chooses a number y and a set of numbers r1,r2,...,rk at random. 
+    For each of the r's he computes the associated cyphertext (g^y, ri * h^y).
+    He then proceeds in a similar manner to the RSA attack. He queries the target for the 
+    time take to decrypt each of the newly generated cyphertexts and them attempts to guess every bit in the private
+    key 1 by 1 by emulating the decryption himself. This proceeds almost entirely the same as in the RSA attack since 
+    the attacker, given a cyphertext (c1,c2), still needs to compute c1^d (where d = -x the private key) so he can 
+    either attack the square or the multiplication exactly the same way as in the original attack. The only difference 
+    vs. the original attack is the added overhead of the final multiplication (c1^-x)*c2 in the decryption time measurements but given that this 
+    operation is performed for all cyphertexts no matter the key and has a much smaller overhead compared to the exponentiation 
+    we can ignore its effects on the time measurements although it does add some noise to these.
 
 Q.4 Numerous factors might produce noise within measurements of execution
     time: based on the given attack target and context, outline at least

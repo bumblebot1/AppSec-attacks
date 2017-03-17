@@ -90,12 +90,12 @@ void Attack::Interact(mpz_class cypherText, mpz_class &plainText, mpz_class &cur
 void Attack::Initialise(int count) {
   for(int i = 0; i < count; i++) {
     mpz_class c    = randomGenerator.get_z_range(N);
-    mpz_class time(0), plainText(0);
-    Interact(c, plainText, time);
+    mpz_class time1(0), plainText(0);
+    Interact(c, plainText, time1);
 
     montgomeryInstance.Convert(c.get_mpz_t(), c.get_mpz_t(), rhoSquared.get_mpz_t(), omega, N.get_mpz_t());
     sampleCyphers.push_back(c);
-    sampleTimes.push_back(time);
+    sampleTimes.push_back(time1);
 
     montgomeryInstance.Multiplication(c.get_mpz_t(), c.get_mpz_t(), c.get_mpz_t(), omega, N.get_mpz_t());
     temp_cs_1[0].push_back(c);

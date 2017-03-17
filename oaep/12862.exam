@@ -99,7 +99,16 @@ Q.4-ANS : This fact is due to the homomorphic property of the RSA encryption sch
     find that the plaintext obtained by decrypting c is in fact f*m' mod N
 
 Q.5 Explain how the concept of plaintext awareness relates to this attack.
-Q.5-ANS: Chosen cyphertext attacks are normally ineffective against a plaintext aware cryptosystem.
-    In the case of RSAES-OEAP scheme, the design of the scheme makes it likely that information will be leaked
-    between the decryption and integrity checking operations making the system susceptible to chosen cyphertext
-    attacks such as Manger's attack.
+Q.5-ANS: A cryptosystem is plaintext aware if it is difficult to create a cyphertext without knowledge of the 
+    corresponding plaintext. Furthermore plaintext aware schemes are normally immune to chosen cyphertext attacks.
+    Vanilla RSA is not plaintext aware so a padding mechanism which adds an integrity check such as OAEP is needed 
+    in order to produce a plaintext aware scheme.
+    RSAES-OAEP, the scheme targetted by this attack, is a plaintext aware cryptosystem and therefore a chosen cyphertext
+    attack should be ineffective. In our case, however, the target for the attack exhibits a major vulnerability:
+    it reveals information about the length of the message corresponding to a given cyphertext through the 2 error
+    codes returned. Because the integrity check only happens after the length of the message has been verified 
+    the attacker is allowed to find the range in which the plaintext corresponding to a given 
+    cyphertext lies in and repeatedly narrow that range until it consists of only one value (the actual message).
+    The major problem is that the attacker can distinguish between an error caused by a message which is too long
+    which happens before any integrity check and an error in the integrity check phase (verification of the label)
+    at which point it can be assumed the message had the correct length.
