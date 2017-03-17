@@ -1,0 +1,109 @@
+-------------------------------------------------------------------------------
+
+1. Instructions
+
+- replace any [...] with free text,
+  and
+- replace the [?] with an X if you have completed that stage,
+- replace the [?] with an * if you have attempted that stage, but you know
+  it doesn't work completely; document why you think it doesn't work, plus
+  what you would do to fix the problem, at the end of the marksheet.
+
+-------------------------------------------------------------------------------
+
+2. Information
+
+So that we can calibrate and improve the assignment in the future, give us
+a rough idea how long (in hours) you spent on it *in total*:
+
+effort : [...] hours
+
+-------------------------------------------------------------------------------
+
+3. Citation
+
+Clearly it might have an influence on your mark, but the use of third-party
+resources *is* allowed *if* correctly cited (unless explicitly prohibited 
+by the assignment description of course).  Let us know what third-party 
+source code or resources you used (if any) so it's clear what's your work 
+and what isn't:
+
+[...]
+
+-------------------------------------------------------------------------------
+
+4. Marking
+
+The following gives a stage-by-stage description of the assignment marking
+scheme.  Note this acts as an indicative guideline only, including weights
+for each more obvious aspect (e.g., functional correctness); other aspects
+outside this list can warrant an increase/decrease in marks, with examples
+including hard to quantify features such as the efficiency, robustness, 
+generality, realism, or style of a solution.
+
+[?] Stage 1 : an attack based on error messages
+              - correct target material                              ( 40%)
+              - solution quality wrt. efficiency, robustness etc.    ( 30%)
+              - analysis questions                                   ( 30%)
+
+              target material : [EE5165F51491D0A1503C6C71CABFFC178CA69973186312A92BB2BD53CFE9771BD9502FA0B216527AB6711049A7855337C0B3E1358DE40DAD3CA7BC0DA42BFD2E55696335BE756A8FD053FBD2BA776D4E0B588379F39123D31FD6FED2BEA931BB3C283B62651C328B427BC25FE07961990B918BA303152846ED983D90E6070F]
+
+[?] Stage 2 : an attack based on execution time
+              - correct target material                              ( 40%)
+              - solution quality wrt. efficiency, robustness etc.    ( 30%)
+              - analysis questions                                   ( 30%)
+
+              target material : [3509CAA17214066D]
+
+[?] Stage 3 : an attack based on an injected fault
+              - correct target material                              ( 40%)
+              - solution quality wrt. efficiency, robustness etc.    ( 30%)
+              - analysis questions                                   ( 30%)
+
+              target material : [...]
+
+[?] Stage 4 : an attack based on power consumption
+              - correct target material                              ( 40%)
+              - solution quality wrt. efficiency, robustness etc.    ( 30%)
+              - analysis questions                                   ( 30%)
+
+              target material : [...]
+
+                                                                     ------
+                                                                     (400%)
+
+-------------------------------------------------------------------------------
+
+5. Documentation
+
+Any other documentation, notes or comments that you think are important or
+might be easy to overlook (e.g., a subtle issue or technique in associated
+source code) should go here:
+
+[
+  I have implemented both attacks in C++. I initially started an implementation 
+  in python of the oaep attack but I found it to be fairly slow so I switched 
+  to c++.
+
+  The OAEP attack follows Manger's paper. I have also implemented the EME-OAEP
+  decode function in order to recover the actual unpacked plaintext.
+  I have not covered the case for when 2*B>=N so that would be one improvement
+  that could be made to this part.
+
+  The timing attack follows the paper by Dhem et al.
+  I have used the .R replica to calculate an estimate of how many clock cycles 
+  a single multiplication takes. This is helpful as it allows me to estimate the number of
+  multiplications that will be executed given my private key. This is very helpful
+  in allowing me to restart the attack if too many operations have been 
+  executed thus having a major impact on performance. Furthermore, I also allow
+  the algorithm to backtrack once in order to account for possible errors in the 
+  decisions. This could be improved by allowing backtracking for lengths larger
+  than 1 bit which could improve performance when attacking very large keys since 
+  you would not have to stop mid-way so frequently and restart the process.
+  In order to distinguish between 0 or 1 I used the absolute value of the 
+  difference of the means. The way I am doing this is by having a threshold in place: 
+  if the absolute value of the difference is smaller than the threshold then I backtrack or 
+  restart the attack from the beggining, otherwise I predict the class with the larger mean.
+]
+
+-------------------------------------------------------------------------------
