@@ -19,6 +19,16 @@ def Interact(fault, message):
   x = [int(c[i:i+2], 16) for i in range(0, len(c) - 1, 2)]
   return int(c, 16), x
 
+def InvertKey(k):
+  r = []
+  for i in range(15, 4, -1):
+    r.append(k[i] ^ k[i - 4])
+  r.append(SubBytes[r[12]] ^ k[3])
+  r.append(SubBytes[r[15]] ^ k[2])
+  r.append(SubBytes[r[14]] ^ k[1])
+  r.append(SubBytes[r[13]] ^ k[0] ^ Rcon[10])
+  return r[::-1]
+
 def StepOne(x, x_faulty, index0, index1, index2, index3):
   equations = [[[] for a in range(256)] for b in range(16)]
   k_0, k_1, k_2, k_3 = [], [], [], []
@@ -60,35 +70,10 @@ k1, k4, k11, k14 = StepOne(x, x_faulty, 1, 4, 11, 14)
 k8, k15, k2, k5 = StepOne(x, x_faulty, 8, 15, 2, 5)
 k3, k6, k9, k12 = StepOne(x, x_faulty, 3, 6, 9, 12)
 
-print(k0)
-print("\n")
-print(k1)
-print("\n")
-print(k2)
-print("\n")
-print(k3)
-print("\n")
-print(k4)
-print("\n")
-print(k5)
-print("\n")
-print(k6)
-print("\n")
-print(k7)
-print("\n")
-print(k8)
-print("\n")
-print(k9)
-print("\n")
-print(k10)
-print("\n")
-print(k11)
-print("\n")
-print(k12)
-print("\n")
-print(k13)
-print("\n")
-print(k14)
-print("\n")
-print(k15)
-print("\n")
+key = []
+for byte10, byte13, byte0, byte7 in ((a,b,c,d) for index, a in enumerate(k10) for b in k13[index] for c in k0[index] for d in k7[index]):
+  for byte1, byte4, byte11, byte14 in ((a,b,c,d) for index, a in enumerate(k1) for b in k4[index] for c in k11[index] for d in k14[index]):
+    for byte8, byte15, byte2, byte5 in ((a,b,c,d) for index, a in enumerate(k8) for b in k15[index] for c in k2[index] for d in k5[index]):
+      for byte3, byte6, byte9, byte12 in ((a,b,c,d) for index, a in enumerate(k3) for b in k6[index] for c in k9[index] for d in k12[index]):
+        key.append([byte0, byte1, byte2, byte3, byte4, byte5, byte6, byte7, byte8, byte9, byte10, byte11, byte12, byte13, byte14, byte15])
+print key
