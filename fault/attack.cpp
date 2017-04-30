@@ -50,10 +50,6 @@ void attack(){
   for(int i=0; i<sampleSize; i++)
     interact(faulty_c[i], 1, 8, 1, 0, 0, 0, input[i]);
 
-  // precomute the multiplications in the field
-  computeMultiplyTable();
-  printf("precomputed multiplication table\n");
-
   // k1, k8, k11, k14
   set1 = setsEquation1(c, faulty_c, kAll);
   printf("%d possibilities for k1 , k8 , k11, k14\n", set1);

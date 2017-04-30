@@ -11,6 +11,7 @@
 #include  <unistd.h>
 #include   <fcntl.h>
 
+#include "galois_multiples.hpp"
 #include <openssl/aes.h>
 
 uint8_t mul_table[256][256];
