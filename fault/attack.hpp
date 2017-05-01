@@ -26,7 +26,7 @@ class Attack {
         int keyFound = 0;
 
     private:
-	void generateRandomMessage(uint8_t m[sampleSize][16]);
+        void generateRandomMessage(uint8_t m[sampleSize][16]);
         int setsEquation1(const uint8_t x[][16], const uint8_t x1[][16], uint8_t k[16][1024]);
         int setsEquation2(const uint8_t x[][16], const uint8_t x1[][16], uint8_t k[16][1024]);
         int setsEquation3(const uint8_t x[][16], const uint8_t x1[][16], uint8_t k[16][1024]);
@@ -45,6 +45,11 @@ class Attack {
         void Execute();
 };
 
+Attack::Attack(FILE* in, FILE* out, void (*clean)(int s)){
+    target_in = in;
+    target_out = out;
+    cleanup = clean;
+}
 
 // generate random messages for multiple measurements
 void Attack::generateRandomMessage(uint8_t m[sampleSize][16]){
