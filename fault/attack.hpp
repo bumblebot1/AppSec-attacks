@@ -1,11 +1,13 @@
 #ifndef __ATTACK_HPP
 #define __ATTACK_HPP
 
+#include <iostream>
 #include  <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
+#include <vector>
 
 #include  <signal.h>
 #include  <unistd.h>
@@ -15,25 +17,28 @@
 #include "aes_params.hpp"
 #include <openssl/aes.h>
 
+using namespace std;
+
 class Attack {
     private:
         FILE* target_in;
         FILE* target_out;
         int interactionCount = 0;
+        vector<vector<uint8_t>> kAll;
         void (*cleanup)(int s);
         int keyFound = 0;
 
     private:
         void RandomMessage(uint8_t m[16]);
-        int Equation1(const uint8_t x[16], const uint8_t x1[16], uint8_t k[16][1024]);
-        int Equation2(const uint8_t x[16], const uint8_t x1[16], uint8_t k[16][1024]);
-        int Equation3(const uint8_t x[16], const uint8_t x1[16], uint8_t k[16][1024]);
-        int Equation4(const uint8_t x[16], const uint8_t x1[16], uint8_t k[16][1024]);
+        int Equation1(const uint8_t x[16], const uint8_t x1[16]);
+        int Equation2(const uint8_t x[16], const uint8_t x1[16]);
+        int Equation3(const uint8_t x[16], const uint8_t x1[16]);
+        int Equation4(const uint8_t x[16], const uint8_t x1[16]);
         uint8_t SecondEquation1(const uint8_t x[16], const uint8_t x1[16], const uint8_t k[16], const uint8_t k9[16]);
         uint8_t SecondEquation2(const uint8_t x[16], const uint8_t x1[16], const uint8_t k[16], const uint8_t k9[16]);
         uint8_t SecondEquation3(const uint8_t x[16], const uint8_t x1[16], const uint8_t k[16], const uint8_t k9[16]);
         uint8_t SecondEquation4(const uint8_t x[16], const uint8_t x1[16], const uint8_t k[16], const uint8_t k9[16]);
-        void PrintKey(const uint8_t state[16]);
+        void PrintKey(const uint8_t key[16]);
         void OriginalKey(uint8_t k[16], int currentRound);
         void RoundKey(uint8_t k[16], const int r);
         void Interact(uint8_t c[16], const int fault, const int r, const int f , const int p, const int i, const int j, const uint8_t m[16]);
@@ -44,31 +49,30 @@ class Attack {
 };
 
 Attack::Attack(FILE* in, FILE* out, void (*clean)(int s)){
-    target_in = in;
-    target_out = out;
-    cleanup = clean;
+  kAll.reserve(16);
+  target_in  = in;
+  target_out = out;
+  cleanup    = clean;
 }
 
 // generate random messages for multiple measurements
 void Attack::RandomMessage(uint8_t m[16]){
   // open file to read random bytes from
-  FILE *fp = fopen("/dev/urandom", "r");
-  int character;
-  for(int j=0; j<16; j++){
-    character = fgetc(fp);
-    m[j] = character;
+  FILE *f = fopen("/dev/urandom", "rb");
+  int l = fread(m, 1, 16, f);
+  if(l != 16) {
+    exit(EXIT_FAILURE);
   }
-
-  // close file
-  fclose(fp);
-
+  printf("Randomly chosen plaintext is:\n");
+  PrintKey(m);
+  printf("\n");
+  fclose(f);
 }
 
 void Attack::Execute(){
   uint8_t input[16];
   uint8_t c[16];
   uint8_t faulty_c[16];
-  uint8_t kAll[16][1024];
   int set1, set2, set3, set4;
   int tested_keys = 0;
 
@@ -79,16 +83,16 @@ void Attack::Execute(){
   Interact(faulty_c, 1, 8, 1, 0, 0, 0, input);
 
   // k1, k8, k11, k14
-  set1 = Equation1(c, faulty_c, kAll);
+  set1 = Equation1(c, faulty_c);
   printf("%d possibilities for k1 , k8 , k11, k14\n", set1);
   // k5, k2, k15, k12
-  set2 = Equation2(c,faulty_c, kAll);
+  set2 = Equation2(c,faulty_c);
   printf("%d possibilities for k2 , k5 , k12, k15\n", set2);
   // k9, k6, k3, k16
-  set3 = Equation3(c, faulty_c, kAll);
+  set3 = Equation3(c, faulty_c);
   printf("%d possibilities for k3 , k6 , k9 , k16\n", set3);
   // k13, k10, k7, k4
-  set4 = Equation4(c, faulty_c, kAll);
+  set4 = Equation4(c, faulty_c);
   printf("%d possibilities for k4 , k7, k10 , k13\n", set4);
 
 
@@ -146,6 +150,7 @@ void Attack::Execute(){
       }
     }
   }
+  cout<<kAll[0].size();
   printf("!!!!!!Key not found, something might have gone wrong, try again !!!!\n");
 }
 
@@ -171,7 +176,7 @@ void Attack::Interact(uint8_t c[16], const int fault, const int r, const int f ,
 }
 
 
-int Attack::Equation1(const uint8_t x[16], const uint8_t x1[16], uint8_t kAll[16][1024] ){
+int Attack::Equation1(const uint8_t x[16], const uint8_t x1[16]){
   int k1, k8, k11, k14, delta;
   int possibilities;
   possibilities = 0;
@@ -187,10 +192,10 @@ int Attack::Equation1(const uint8_t x[16], const uint8_t x1[16], uint8_t kAll[16
 
           for(k8 = 0; k8<= 0xFF; k8++){
             if(GaloisTable3[delta] == (inv_s[x[7] ^ k8] ^ inv_s[x1[7] ^ k8]) ){
-              kAll[0][possibilities]  = k1;
-              kAll[13][possibilities] = k14;
-              kAll[10][possibilities] = k11;
-              kAll[7][possibilities]  = k8;
+              kAll[0].push_back(k1);
+              kAll[7].push_back(k8);
+              kAll[10].push_back(k11);
+              kAll[13].push_back(k14);
               possibilities++;
             }
           }
@@ -203,7 +208,7 @@ int Attack::Equation1(const uint8_t x[16], const uint8_t x1[16], uint8_t kAll[16
 }
 
 
-int Attack::Equation2(const uint8_t x[16], const uint8_t x1[16], uint8_t kAll[16][1024] ){
+int Attack::Equation2(const uint8_t x[16], const uint8_t x1[16]){
   int k5, k2, k15, k12, delta;
   int possibilities = 0;
   for(delta=1; delta <= 0xFF; delta++){
@@ -219,10 +224,10 @@ int Attack::Equation2(const uint8_t x[16], const uint8_t x1[16], uint8_t kAll[16
             
             for(k12 = 0; k12<= 0xFF; k12++){
               if(GaloisTable2[delta] == (inv_s[x[11] ^ k12] ^ inv_s[x1[11] ^ k12]) ){
-                kAll[4][possibilities]   = k5;
-                kAll[1][possibilities]   = k2;
-                kAll[14][possibilities]  = k15;
-                kAll[11][possibilities]  = k12;
+                kAll[1].push_back(k2);
+                kAll[4].push_back(k5);
+                kAll[11].push_back(k12);
+                kAll[14].push_back(k15);
                 possibilities++;
               }
             }
@@ -235,7 +240,7 @@ int Attack::Equation2(const uint8_t x[16], const uint8_t x1[16], uint8_t kAll[16
   return possibilities;
 }
 
-int Attack::Equation3(const uint8_t x[16], const uint8_t x1[16], uint8_t kAll[16][1024] ){
+int Attack::Equation3(const uint8_t x[16], const uint8_t x1[16]){
   int k9, k6, k3, k16, delta;
   int possibilities = 0;
   for(delta=1; delta <= 0xFF; delta++){
@@ -251,10 +256,10 @@ int Attack::Equation3(const uint8_t x[16], const uint8_t x1[16], uint8_t kAll[16
 
             for(k16 = 0; k16<= 0xFF; k16++){
               if(delta == (inv_s[x[15] ^ k16] ^ inv_s[x1[15] ^ k16]) ){
-                kAll[8][possibilities]   = k9;
-                kAll[5][possibilities]   = k6;
-                kAll[2][possibilities]   = k3;
-                kAll[15][possibilities]  = k16;
+                kAll[2].push_back(k3);
+                kAll[5].push_back(k6);
+                kAll[8].push_back(k9);
+                kAll[15].push_back(k16);
                 possibilities++;
               }
             }
@@ -266,7 +271,7 @@ int Attack::Equation3(const uint8_t x[16], const uint8_t x1[16], uint8_t kAll[16
   return possibilities;
 }
 
-int Attack::Equation4(const uint8_t x[16], const uint8_t x1[16], uint8_t kAll[16][1024] ){
+int Attack::Equation4(const uint8_t x[16], const uint8_t x1[16]){
   int k13, k10, k7, k4, delta;
   int possibilities = 0;
   for(delta=1; delta <= 0xFF; delta++){
@@ -282,10 +287,10 @@ int Attack::Equation4(const uint8_t x[16], const uint8_t x1[16], uint8_t kAll[16
 
             for(k4 = 0; k4<= 0xFF; k4++){
               if(delta == (inv_s[x[3] ^ k4] ^ inv_s[x1[3] ^ k4]) ){
-                kAll[12][possibilities]  = k13;
-                kAll[9][possibilities]   = k10;
-                kAll[6][possibilities]   = k7;
-                kAll[3][possibilities]   = k4;
+                kAll[3].push_back(k4);
+                kAll[6].push_back(k7);
+                kAll[9].push_back(k10);
+                kAll[12].push_back(k13);
                 possibilities++;
               }
             }
