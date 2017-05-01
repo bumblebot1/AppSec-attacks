@@ -1,19 +1,12 @@
 #include "attack.hpp"
 
-#include  <cstdlib>
-#include  <signal.h>
-#include  <unistd.h>
-#include   <fcntl.h>
-
-using namespace std;
-
-pid_t pid = 0;    // process ID (of either parent or child) from fork
-
-int target_raw[2];   // unbuffered communication: attacker -> attack target
-int attack_raw[2];   // unbuffered communication: attack target -> attacker
+#define sampleSize 1
 
 FILE* target_out = NULL; // buffered attack target input  stream
 FILE* target_in  = NULL; // buffered attack target output stream
+pid_t pid        = 0;    // process ID (of either parent or child) from fork
+int   target_raw[ 2 ];   // unbuffered communication: attacker -> attack target
+int   attack_raw[ 2 ];   // unbuffered communication: attack target -> attacker
 
 void cleanup(int s);
 

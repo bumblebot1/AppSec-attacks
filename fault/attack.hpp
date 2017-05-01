@@ -2,315 +2,403 @@
 #define __ATTACK_HPP
 
 #include <iostream>
-#include <iomanip>
+#include  <stdio.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdbool.h>
 #include <vector>
-#include <iterator>
-#include <cstring>
-#include <gmpxx.h>
-#include <fstream>
-#include "aes_params.hpp"
+
+#include  <signal.h>
+#include  <unistd.h>
+#include   <fcntl.h>
+
 #include "galois_multiples.hpp"
-#include <omp.h>
+#include "aes_params.hpp"
 #include <openssl/aes.h>
 
 using namespace std;
 
-typedef unsigned char byte;
-
 class Attack {
-  private:
-    mpz_class m, c, c_faulty;
-    FILE* target_in;
-    FILE* target_out;
-    unsigned long interactionCount;
-    gmp_randclass randomGenerator{gmp_randinit_default};
-    void (*cleanup)(int s);
-  private:
-    void throwErrorAndAbort(string errorMessage);
-    unsigned char ComputeFPrime (unsigned char x[], unsigned char x_faulty[], vector<unsigned char> &r, vector<unsigned char> &k);
-    unsigned char ComputeFPrime1(unsigned char x[], unsigned char x_faulty[], vector<unsigned char> &r, vector<unsigned char> &k);
-    unsigned char ComputeFPrime2(unsigned char x[], unsigned char x_faulty[], vector<unsigned char> &r, vector<unsigned char> &k);
-    unsigned char ComputeFPrime3(unsigned char x[], unsigned char x_faulty[], vector<unsigned char> &r, vector<unsigned char> &k);
-    void Step1(unsigned char x[16], 
-               unsigned char x_faulty[16],
-               vector<byte> &k, 
-               vector<vector<byte>> &k_1, 
-               vector<vector<byte>> &k_2, 
-               vector<vector<byte>> &k_3, 
-               int ind0, int ind1, int ind2, int ind3);
-    void KeyInv(unsigned char* r, const unsigned char* k, int round);
-    void Interact(string fault, mpz_class &m, mpz_class &c);
-  public:
-    Attack(FILE* in, FILE* out, void (*clean)(int s));
-    void Execute();
+    private:
+        FILE* target_in;
+        FILE* target_out;
+        int interactionCount = 0;
+        vector<vector<uint8_t>> kAll;
+        void (*cleanup)(int s);
+        int keyFound = 0;
+
+    private:
+        void RandomMessage(uint8_t m[16]);
+        int Equation1(const uint8_t x[16], const uint8_t x1[16]);
+        int Equation2(const uint8_t x[16], const uint8_t x1[16]);
+        int Equation3(const uint8_t x[16], const uint8_t x1[16]);
+        int Equation4(const uint8_t x[16], const uint8_t x1[16]);
+        uint8_t SecondEquation1(const uint8_t x[16], const uint8_t x1[16], const uint8_t k[16], const uint8_t k9[16]);
+        uint8_t SecondEquation2(const uint8_t x[16], const uint8_t x1[16], const uint8_t k[16], const uint8_t k9[16]);
+        uint8_t SecondEquation3(const uint8_t x[16], const uint8_t x1[16], const uint8_t k[16], const uint8_t k9[16]);
+        uint8_t SecondEquation4(const uint8_t x[16], const uint8_t x1[16], const uint8_t k[16], const uint8_t k9[16]);
+        void PrintKey(const uint8_t key[16]);
+        void OriginalKey(uint8_t k[16], int currentRound);
+        void RoundKey(uint8_t k[16], const int r);
+        void Interact(uint8_t c[16], const int fault, const int r, const int f , const int p, const int i, const int j, const uint8_t m[16]);
+    
+    public:
+        Attack(FILE* in, FILE* out, void (*clean)(int s));
+        void Execute();
 };
 
-/**
- * @brief Constructor for the Attack Class.
- *
- * @param in     pointer to the stdin of the target.
- * @param out    pointer to the stdout of the target.
- * @param clean  the cleanup function to be invoked on abnormal exit.
- */
-Attack::Attack(FILE* in, FILE* out, void (*clean)(int s)) {
-  interactionCount = 0;
-
+Attack::Attack(FILE* in, FILE* out, void (*clean)(int s)){
+  kAll.reserve(16);
   target_in  = in;
   target_out = out;
-  cleanup = clean;
+  cleanup    = clean;
 }
 
-/*
- * @brief function to interact with the attack target
- *
- * @param fault    string specifying the fault to be induced
- * @param m        mpz_class message to be encrypted by the target
- * @param c        mpz_class value to hold the cyphertext corresponding to the faulty encryption of m
- */
-void Attack::Interact(string fault, mpz_class &m, mpz_class &c)
-{
-  gmp_fprintf(target_in, "%s\n%ZX\n", fault.c_str(), m.get_mpz_t());
-  fflush(target_in);
+// generate random messages for multiple measurements
+void Attack::RandomMessage(uint8_t m[16]){
+  // open file to read random bytes from
+  FILE *f = fopen("/dev/urandom", "rb");
+  int l = fread(m, 1, 16, f);
+  if(l != 16) {
+    exit(EXIT_FAILURE);
+  }
+  printf("Randomly chosen plaintext is:\n");
+  PrintKey(m);
+  printf("\n");
+  fclose(f);
+}
 
-  gmp_fscanf(target_out, "%ZX", c.get_mpz_t());
+void Attack::Execute(){
+  uint8_t input[16];
+  uint8_t c[16];
+  uint8_t faulty_c[16];
+  int set1, set2, set3, set4;
+  int tested_keys = 0;
+
+  // get random messages
+  RandomMessage(input);
+
+  Interact(c, 0, 8, 1, 0, 0, 0, input);
+  Interact(faulty_c, 1, 8, 1, 0, 0, 0, input);
+
+  // k1, k8, k11, k14
+  set1 = Equation1(c, faulty_c);
+  printf("%d possibilities for k1 , k8 , k11, k14\n", set1);
+  // k5, k2, k15, k12
+  set2 = Equation2(c,faulty_c);
+  printf("%d possibilities for k2 , k5 , k12, k15\n", set2);
+  // k9, k6, k3, k16
+  set3 = Equation3(c, faulty_c);
+  printf("%d possibilities for k3 , k6 , k9 , k16\n", set3);
+  // k13, k10, k7, k4
+  set4 = Equation4(c, faulty_c);
+  printf("%d possibilities for k4 , k7, k10 , k13\n", set4);
+
+
+  printf("Computing last set of equations\n");
+  #pragma omp parallel for
+  for(int j1 = 0; j1< set1; j1++){
+    for(int j2 = 0; j2 < set2; j2++){
+      for(int j3 = 0; j3 < set3; j3++){
+        for(int j4 = 0; j4 < set4; j4++){
+          uint8_t k[16];
+          uint8_t k9[16];
+          // key guess after round 10
+          k[0]  = kAll[0][j1];  k[7]  = kAll[7][j1];  k[10] = kAll[10][j1];   k[13] = kAll[13][j1];
+          k[4]  = kAll[4][j2];  k[1]  = kAll[1][j2];  k[14] = kAll[14][j2];   k[11] = kAll[11][j2];
+          k[8]  = kAll[8][j3];  k[5]  = kAll[5][j3];  k[2]  = kAll[2][j3];    k[15] = kAll[15][j3];
+          k[12] = kAll[12][j4]; k[9]  = kAll[9][j4];  k[6]  = kAll[6][j4];    k[3]  = kAll[3][j4];
+
+          // same key guess after round 10
+          k9[0]  = kAll[0][j1];   k9[7]  = kAll[7][j1];   k9[10] = kAll[10][j1];  k9[13] = kAll[13][j1];
+          k9[4]  = kAll[4][j2];   k9[1]  = kAll[1][j2];   k9[14] = kAll[14][j2];  k9[11] = kAll[11][j2];
+          k9[8]  = kAll[8][j3];   k9[5]  = kAll[5][j3];   k9[2]  = kAll[2][j3];   k9[15] = kAll[15][j3];
+          k9[12] = kAll[12][j4];  k9[9]  = kAll[9][j4];   k9[6]  = kAll[6][j4];   k9[3]  = kAll[3][j4];
+
+          // get key from round 9
+          RoundKey(k9, 10);
+
+          // get result of equation
+          uint8_t f = SecondEquation2(c, faulty_c, k, k9);
+
+          // check te above result against the other 3 results
+          if( f == SecondEquation3(c, faulty_c, k, k9) &&  (GaloisTable3[f] == SecondEquation4(c, faulty_c, k, k9)) && (GaloisTable2[f] == SecondEquation1(c, faulty_c, k, k9)) ) {
+            tested_keys = tested_keys + 1;
+            if(tested_keys % 5 == 0)
+              printf("potential keys tested: %d \n", tested_keys  );
+            // get original key used for encryption
+            OriginalKey(k9, 9);
+
+            // simulate AES encryption using the retrieved key
+            AES_KEY rk;
+            AES_set_encrypt_key( k9, 128, &rk );
+            uint8_t result[16];
+            AES_encrypt( input, result, &rk );
+
+            // if result is right, found key
+            if( !memcmp( result, c, 16 * sizeof( uint8_t ) ) ) {
+              printf("potential keys tested: %d \n", tested_keys  );
+              printf( "Key found: ");
+              PrintKey(k9);
+              printf("interactions with the oracle: %d\n", interactionCount);
+              keyFound = 1;
+              exit(EXIT_SUCCESS);
+            }
+          }
+        }
+      }
+    }
+  }
+  cout<<kAll[0].size();
+  printf("!!!!!!Key not found, something might have gone wrong, try again !!!!\n");
+}
+
+void Attack::Interact(uint8_t c[16], const int fault, const int r, const int f , const int p, const int i, const int j, const uint8_t m[16]) {
+  if(fault) {
+    fprintf( target_in, "%d,%d,%d,%d,%d", r, f, p, i, j );
+  }
+  fprintf(target_in, "\n");
+
+  for(int l = 0; l < 16; l++){
+    fprintf(target_in, "%02X",  m[l]);
+  }
+  fprintf(target_in,"\n");
+  fflush( target_in );
+
+  // Receive ( t, r ) from attack target.
+  for(int l = 0; l < 16; l++){
+    if( 1 != fscanf( target_out, "%2hhx", &c[l] ) ) {
+      abort();
+    }
+  }
   interactionCount++;
 }
 
-void Attack::KeyInv(unsigned char* r, const unsigned char* k, int round) {
-    unsigned char round_char = Rcon[round];
-    r[15] = k[15] ^ k[11];
-    r[14] = k[14] ^ k[10];
-    r[13] = k[13] ^ k[9];
-    r[12] = k[12] ^ k[8];
-    
-    r[11] = k[11] ^ k[7];
-    r[10] = k[10] ^ k[6];
-    r[9]  =  k[9] ^ k[5];
-    r[8]  =  k[8] ^ k[4];
-    
-    r[7]  =  k[7] ^ k[3];
-    r[6]  =  k[6] ^ k[2];
-    r[5]  =  k[5] ^ k[1];
-    r[4]  =  k[4] ^ k[0];
-    
-    r[3]  = SubBytes[r[12]] ^ k[3];
-    r[2]  = SubBytes[r[15]] ^ k[2];
-    r[1]  = SubBytes[r[14]] ^ k[1];
-    r[0]  = SubBytes[r[13]] ^ k[0] ^ round_char;    
-}
 
-void Attack::Execute() {
-  m = randomGenerator.get_z_bits(128);
-  Interact("", m, c);
-  Interact("8,1,0,0,0", m, c_faulty);
-  unsigned char x[16], x_faulty[16];
-  mpz_export(x, NULL, 1, 1, 0, 0, c.get_mpz_t());
-  mpz_export(x_faulty, NULL, 1, 1, 0, 0, c_faulty.get_mpz_t());
-  
-  vector<byte> k10, k1, k8, k3;
-  vector<vector<byte>>k0, k2, k4, k5, k6, k7, k9, k11, k12, k13, k14, k15;
-  Step1(x, x_faulty, k10, k13, k0,  k7,  10, 13, 0,  7);
-  Step1(x, x_faulty, k1,  k4,  k11, k14, 1,  4,  11, 14);
-  Step1(x, x_faulty, k8,  k15, k2,  k5,  8,  15, 2,  5);
-  Step1(x, x_faulty, k3,  k6,  k9,  k12, 3,  6,  9,  12);
+int Attack::Equation1(const uint8_t x[16], const uint8_t x1[16]){
+  int k1, k8, k11, k14, delta;
+  int possibilities;
+  possibilities = 0;
+  for(delta=1; delta <= 0xFF; delta++){
+    for(k1 = 0; k1 <= 0xFF; k1++){
+      if(GaloisTable2[delta] == (inv_s[x[0] ^ k1] ^ inv_s[x1[0] ^ k1]) ){
 
-  unsigned char m_char[16] = {0};
-  unsigned char c_char[16] = {0};
-  mpz_export(m_char, NULL, 1, 1, 0, 0, m.get_mpz_t());
-  mpz_export(c_char, NULL, 1, 1, 0, 0, c.get_mpz_t());
+      for(k14 = 0; k14 <= 0xFF; k14++){
+        if(delta == (inv_s[x[13]^ k14] ^ inv_s[x1[13] ^ k14]) )
 
-  #pragma omp parallel for
-  for (int i_10 = 0 ; i_10 < k10.size(); i_10++) {   // each hypothesis for 10th key byte
-    for (unsigned char byte_13 : k13[i_10])       // each respective hypothesis for 13th key byte
-    for (unsigned char byte_0 : k0[i_10])     // each respective hypothesis for  0th key byte
-    for (unsigned char byte_7 : k7[i_10]) // each respective hypothesis for  7th key byte
-      
-      for (int i_1 = 0 ; i_1 < k1.size(); i_1++)       // each hypothesis for 1st key byte
-      for (unsigned char byte_4 : k4[i_1])          // each respective hypothesis for  4th key byte
-      for (unsigned char byte_11 : k11[i_1])    // each respective hypothesis for 11th key byte
-      for (unsigned char byte_14 : k14[i_1])// each respective hypothesis for 14th key byte
-                      
-        for (int i_8 = 0; i_8 < k8.size(); i_8++)      // each hypothesis for 8th key byte
-        for (unsigned char byte_15 : k15[i_8])      // each respective hypothesis for 15th key byte
-        for (unsigned char byte_2 : k2[i_8])    // each respective hypothesis for  2nd key byte
-        for (unsigned char byte_5 : k5[i_8])// each respective hypothesis for  5th key byte
-                                                  
-          for (int i_3 = 0; i_3 < k3.size(); i_3++)        // each hypothesis for 3rd key byte
-          for (unsigned char byte_6 : k6[i_3])          // each respective hypothesis for  6th key byte
-          for (unsigned char byte_9 : k9[i_3])      // each respective hypothesis for  9th key byte
-          for (unsigned char byte_12 : k12[i_3]) { // each respective hypothesis for 12th key byte
-              // 'assemble' the hypothetical key
-              vector<unsigned char> key(16);
-              key[0] = byte_0;
-              key[1] = k1[i_1];
-              key[2] = byte_2;
-              key[3] = k3[i_3];
-              key[4] = byte_4;
-              key[5] = byte_5;
-              key[6] = byte_6;
-              key[7] = byte_7;
-              key[8] = k8[i_8];
-              key[9] = byte_9;
-              key[10] = k10[i_10];
-              key[11] = byte_11;
-              key[12] = byte_12;
-              key[13] = byte_13;
-              key[14] = byte_14;
-              key[15] = byte_15;
-              
-              vector<unsigned char> inv_key(16);
-              
-              // inverse the hypothetical key: to get 9th round key
-              KeyInv(inv_key.data(), key.data(), 10);
-              
-              // second step of the attack
-              unsigned char f_prime = ComputeFPrime(x, x_faulty, inv_key, key);
-              if (f_prime != ComputeFPrime1(x, x_faulty, inv_key, key))
-                  continue;
-              if (GaloisTable3[f_prime] != ComputeFPrime3(x, x_faulty, inv_key, key))
-                  continue;
-              if (GaloisTable2[f_prime] != ComputeFPrime2(x, x_faulty, inv_key, key))
-                  continue;
-              cout<<"."<<flush;
-              // get the AES key from the 10th round key
-              for (int j = 10; j > 0; j--)
-                  KeyInv(key.data(), key.data(), j);
-              
-              // verification step
-              unsigned char t[16];
+        for(k11 = 0; k11<= 0xFF; k11++){
+          if(delta == (inv_s[x[10] ^ k11] ^ inv_s[x1[10] ^ k11]) )
 
-              AES_KEY rk;
-              AES_set_encrypt_key(key.data(), 128, &rk);
-              AES_encrypt(m_char, t, &rk);  
-
-              if(!memcmp(t, c_char, 16)) {
-                  printf("\nAES.Enc( k, m ) == c\nk = ");
-                  for (int i = 0; i < 16; i++)
-                      printf("%02X", key[i]);
-                  
-                  cout << "\nNumber of interactions with the target: " << interactionCount << "\n\n";
-                  exit(0);
-              }   
+          for(k8 = 0; k8<= 0xFF; k8++){
+            if(GaloisTable3[delta] == (inv_s[x[7] ^ k8] ^ inv_s[x1[7] ^ k8]) ){
+              kAll[0].push_back(k1);
+              kAll[7].push_back(k8);
+              kAll[10].push_back(k11);
+              kAll[13].push_back(k14);
+              possibilities++;
+            }
           }
+        }
+      }
+     }
+   }
   }
+  return possibilities;
 }
 
 
-void Attack::Step1(unsigned char x[16], 
-                   unsigned char x_faulty[16], 
-                   vector<byte> &k, 
-                   vector<vector<byte>> &k_1, 
-                   vector<vector<byte>> &k_2, 
-                   vector<vector<byte>> &k_3, 
-                   int ind0, int ind1, int ind2, int ind3) {
-  for (int i = 0; i < 256; i++) {
-    byte byte0 = i;
-
-    byte delta = (SubBytesInverse[x[ind0] ^ byte0] ^ SubBytesInverse[x_faulty[ind0] ^ byte0]);
-    vector<byte> k_1_vect, k_2_vect, k_3_vect;
-
-    for (int j = 0; j < 256; j++) {
-      byte byte1 = j;
-      if(delta == (SubBytesInverse[x[ind1] ^ byte1] ^ SubBytesInverse[x_faulty[ind1] ^ byte1]))
-        k_1_vect.push_back(byte1);
-    }
-    if (k_1_vect.empty())
-      continue;
-
-    for (int j = 0; j < 256; j++) {
-      byte byte2 = j;
-      if(GaloisTable2[delta] == (SubBytesInverse[x[ind2] ^ byte2] ^ SubBytesInverse[x_faulty[ind2] ^ byte2]))
-        k_2_vect.push_back(byte2);
-    }
-    if (k_2_vect.empty())
-      continue;
+int Attack::Equation2(const uint8_t x[16], const uint8_t x1[16]){
+  int k5, k2, k15, k12, delta;
+  int possibilities = 0;
+  for(delta=1; delta <= 0xFF; delta++){
     
-    for (int j = 0; j < 256; j++) {
-      byte byte3 = j;
-      if(GaloisTable3[delta] == (SubBytesInverse[x[ind3] ^ byte3] ^ SubBytesInverse[x_faulty[ind3] ^ byte3]))
-        k_3_vect.push_back(byte3);
+    for(k5 = 0; k5 <= 0xFF; k5++){
+      if(delta == (inv_s[x[4] ^ k5] ^ inv_s[x1[4] ^ k5]) ){
+        
+        for(k2 = 0; k2 <= 0xFF; k2++){
+          if(delta == (inv_s[x[1]^ k2] ^ inv_s[x1[1] ^ k2]) )
+          
+          for(k15 = 0; k15<= 0xFF; k15++){
+            if(GaloisTable3[delta]== (inv_s[x[14] ^ k15] ^ inv_s[x1[14] ^ k15]) )
+            
+            for(k12 = 0; k12<= 0xFF; k12++){
+              if(GaloisTable2[delta] == (inv_s[x[11] ^ k12] ^ inv_s[x1[11] ^ k12]) ){
+                kAll[1].push_back(k2);
+                kAll[4].push_back(k5);
+                kAll[11].push_back(k12);
+                kAll[14].push_back(k15);
+                possibilities++;
+              }
+            }
+          }
+        }
+      }
     }
-    if (k_3_vect.empty())
-      continue;
+  }
+  
+  return possibilities;
+}
 
-    k.push_back(byte0);
-    k_1.push_back(k_1_vect);
-    k_2.push_back(k_2_vect);
-    k_3.push_back(k_3_vect);
+int Attack::Equation3(const uint8_t x[16], const uint8_t x1[16]){
+  int k9, k6, k3, k16, delta;
+  int possibilities = 0;
+  for(delta=1; delta <= 0xFF; delta++){
+    
+    for(k9 = 0; k9 <= 0xFF; k9++){
+      if(delta == (inv_s[x[8] ^ k9] ^ inv_s[x1[8] ^ k9]) ){
+
+        for(k6 = 0; k6 <= 0xFF; k6++){
+          if(GaloisTable3[delta] == (inv_s[x[5]^ k6] ^ inv_s[x1[5] ^ k6]) )
+
+          for(k3 = 0; k3<= 0xFF; k3++){
+            if(GaloisTable2[delta] == (inv_s[x[2] ^ k3] ^ inv_s[x1[2] ^ k3]) )
+
+            for(k16 = 0; k16<= 0xFF; k16++){
+              if(delta == (inv_s[x[15] ^ k16] ^ inv_s[x1[15] ^ k16]) ){
+                kAll[2].push_back(k3);
+                kAll[5].push_back(k6);
+                kAll[8].push_back(k9);
+                kAll[15].push_back(k16);
+                possibilities++;
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  return possibilities;
+}
+
+int Attack::Equation4(const uint8_t x[16], const uint8_t x1[16]){
+  int k13, k10, k7, k4, delta;
+  int possibilities = 0;
+  for(delta=1; delta <= 0xFF; delta++){
+    
+    for(k13 = 0; k13 <= 0xFF; k13++){
+      if(GaloisTable3[delta] == (inv_s[x[12] ^ k13] ^ inv_s[x1[12] ^ k13]) ){
+
+        for(k10 = 0; k10 <= 0xFF; k10++){
+          if( GaloisTable2[delta] == (inv_s[x[9]^ k10] ^ inv_s[x1[9] ^ k10]) )
+
+          for(k7 = 0; k7<= 0xFF; k7++){
+            if(delta == (inv_s[x[6] ^ k7] ^ inv_s[x1[6] ^ k7]) )
+
+            for(k4 = 0; k4<= 0xFF; k4++){
+              if(delta == (inv_s[x[3] ^ k4] ^ inv_s[x1[3] ^ k4]) ){
+                kAll[3].push_back(k4);
+                kAll[6].push_back(k7);
+                kAll[9].push_back(k10);
+                kAll[12].push_back(k13);
+                possibilities++;
+              }
+            }
+          }
+        }
+      }
+    }
+  } 
+  return possibilities;
+}
+
+uint8_t Attack::SecondEquation1(const uint8_t x[16], const uint8_t x1[16], const uint8_t k[16], const uint8_t k9[16]){
+  uint8_t a, b;
+
+  a = GaloisTable14[inv_s[ x[0]  ^  k[0] ] ^ k9[0] ] ^
+      GaloisTable11[inv_s[ x[13] ^ k[13] ] ^ k9[1] ] ^
+      GaloisTable13[inv_s[ x[10] ^ k[10] ] ^ k9[2] ] ^
+      GaloisTable9 [inv_s[ x[7]  ^  k[7] ] ^ k9[3] ];
+  
+  b = GaloisTable14[inv_s[ x1[0]  ^  k[0] ] ^ k9[0] ] ^
+      GaloisTable11[inv_s[ x1[13] ^ k[13] ] ^ k9[1] ] ^
+      GaloisTable13[inv_s[ x1[10] ^ k[10] ] ^ k9[2] ] ^
+      GaloisTable9 [inv_s[ x1[7]  ^  k[7] ] ^ k9[3] ];
+
+  return inv_s[a] ^ inv_s[b];
+}
+
+uint8_t Attack::SecondEquation2(const uint8_t x[16], const uint8_t x1[16], const uint8_t k[16], const uint8_t k9[16]){
+  uint8_t a, b;
+
+  a = GaloisTable9 [ inv_s[ x[12] ^ k[12] ] ^ k9[12] ] ^
+      GaloisTable14[ inv_s[ x[9]  ^  k[9] ] ^ k9[13] ] ^
+      GaloisTable11[ inv_s[ x[6]  ^  k[6] ] ^ k9[14] ] ^
+      GaloisTable13[ inv_s[ x[3]  ^  k[3] ] ^ k9[15] ];
+
+  b = GaloisTable9 [ inv_s[ x1[12] ^ k[12] ] ^  k9[12] ] ^
+      GaloisTable14[ inv_s[ x1[9]  ^  k[9] ] ^  k9[13] ] ^
+      GaloisTable11[ inv_s[ x1[6]  ^  k[6] ] ^  k9[14] ] ^
+      GaloisTable13[ inv_s[ x1[3]  ^  k[3] ] ^  k9[15] ];
+
+  return inv_s[a] ^ inv_s[b];
+}
+
+uint8_t Attack::SecondEquation3(const uint8_t x[16], const uint8_t x1[16], const uint8_t k[16], const uint8_t k9[16]){
+  uint8_t a, b;
+  a = GaloisTable13[inv_s[ x[8]  ^  k[8] ] ^ k9[8] ] ^
+      GaloisTable9 [inv_s[ x[5]  ^  k[5] ] ^ k9[9] ] ^
+      GaloisTable14[inv_s[ x[2]  ^  k[2] ] ^ k9[10]] ^
+      GaloisTable11[inv_s[ x[15] ^ k[15] ] ^ k9[11]];
+          
+  b = GaloisTable13[inv_s[ x1[8]  ^  k[8] ] ^ k9[8] ] ^
+      GaloisTable9 [inv_s[ x1[5]  ^  k[5] ] ^ k9[9] ] ^
+      GaloisTable14[inv_s[ x1[2]  ^  k[2] ] ^ k9[10]] ^
+      GaloisTable11[inv_s[ x1[15] ^ k[15] ] ^ k9[11]];
+
+  return inv_s[a] ^ inv_s[b];
+}
+
+uint8_t Attack::SecondEquation4(const uint8_t x[16], const uint8_t x1[16], const uint8_t k[16], const uint8_t k9[16]){
+  uint8_t a ,b;
+
+
+  a = GaloisTable11[inv_s[ x[4]  ^ k[4]  ] ^ k9[4]] ^
+      GaloisTable13[inv_s[ x[1]  ^ k[1]  ] ^ k9[5]] ^
+      GaloisTable9 [inv_s[ x[14] ^ k[14] ] ^ k9[6]] ^
+      GaloisTable14[inv_s[ x[11] ^ k[11] ] ^ k9[7]];
+  
+  b = GaloisTable11[inv_s[ x1[4]  ^ k[4]  ] ^ k9[4]] ^
+      GaloisTable13[inv_s[ x1[1]  ^ k[1]  ] ^ k9[5]] ^
+      GaloisTable9 [inv_s[ x1[14] ^ k[14] ] ^ k9[6]] ^
+      GaloisTable14[inv_s[ x1[11] ^ k[11] ] ^ k9[7]];
+
+  return inv_s[a] ^ inv_s[b];
+}
+
+void Attack::OriginalKey(uint8_t k[16], int currentRound){
+  for(int i=currentRound; i>0; i--){
+    RoundKey(k, i);
   }
 }
 
-unsigned char Attack::ComputeFPrime(unsigned char x[], unsigned char x_faulty[], vector<unsigned char> &r, vector<unsigned char> &k) {
-    unsigned char A = SubBytesInverse[
-                        GaloisTable9[SubBytesInverse[x[12]^k[12]] ^ r[12]] ^
-                        GaloisTable14[SubBytesInverse[x[9] ^k[9] ] ^ r[13]] ^
-                        GaloisTable11[SubBytesInverse[x[6] ^k[6] ] ^ r[14]] ^
-                        GaloisTable13[SubBytesInverse[x[3] ^k[3] ] ^ r[15]] 
-                      ];
-    unsigned char B = SubBytesInverse[
-                        GaloisTable9[SubBytesInverse[x_faulty[12]^k[12]] ^ r[12]] ^
-                        GaloisTable14[SubBytesInverse[x_faulty[9] ^k[9] ] ^ r[13]] ^
-                        GaloisTable11[SubBytesInverse[x_faulty[6] ^k[6] ] ^ r[14]] ^
-                        GaloisTable13[SubBytesInverse[x_faulty[3] ^k[3] ] ^ r[15]] 
-                      ];
-    return (A ^ B);
+void Attack::RoundKey(uint8_t k[16], const int r){
+  k[12] ^=  k[8];
+  k[13] ^=  k[9];
+  k[14] ^=  k[10];
+  k[15] ^=  k[11];
+
+  k[8]  ^=  k[4];
+  k[9]  ^=  k[5];
+  k[10] ^=  k[6];
+  k[11] ^=  k[7];
+
+  k[4] ^= k[0];
+  k[5] ^= k[1];
+  k[6] ^= k[2];
+  k[7] ^= k[3];
+
+  k[0] ^=  s[k[13]] ^ rcon[r];
+  k[1] ^=  s[k[14]];
+  k[2] ^=  s[k[15]];
+  k[3] ^=  s[k[12]];
 }
 
-unsigned char Attack::ComputeFPrime1(unsigned char x[], unsigned char x_faulty[], vector<unsigned char> &r, vector<unsigned char> &k) {
-    unsigned char A = SubBytesInverse[
-                        GaloisTable9[SubBytesInverse[x[5] ^k[5] ] ^  r[9]] ^
-                        GaloisTable14[SubBytesInverse[x[2] ^k[2] ] ^ r[10]] ^
-                        GaloisTable11[SubBytesInverse[x[15]^k[15]] ^ r[11]] ^
-                        GaloisTable13[SubBytesInverse[x[8] ^k[8] ] ^  r[8]] 
-                      ];
-    unsigned char B = SubBytesInverse[
-                        GaloisTable9[SubBytesInverse[x_faulty[5] ^k[5] ] ^  r[9]] ^
-                        GaloisTable14[SubBytesInverse[x_faulty[2] ^k[2] ] ^ r[10]] ^
-                        GaloisTable11[SubBytesInverse[x_faulty[15]^k[15]] ^ r[11]] ^
-                        GaloisTable13[SubBytesInverse[x_faulty[8] ^k[8] ] ^  r[8]] 
-                      ];
-    return (A ^ B);
-}
-
-unsigned char Attack::ComputeFPrime2(unsigned char x[], unsigned char x_faulty[], vector<unsigned char> &r, vector<unsigned char> &k) {
-    unsigned char A = SubBytesInverse[
-                        GaloisTable9[SubBytesInverse[x[7] ^k[7] ] ^ r[3]] ^
-                        GaloisTable14[SubBytesInverse[x[0] ^k[0] ] ^ r[0]] ^
-                        GaloisTable11[SubBytesInverse[x[13]^k[13]] ^ r[1]] ^
-                        GaloisTable13[SubBytesInverse[x[10]^k[10]] ^ r[2]] 
-                      ];
-    unsigned char B = SubBytesInverse[
-                        GaloisTable9[SubBytesInverse[x_faulty[7] ^k[7] ] ^ r[3]] ^
-                        GaloisTable14[SubBytesInverse[x_faulty[0] ^k[0] ] ^ r[0]] ^
-                        GaloisTable11[SubBytesInverse[x_faulty[13]^k[13]] ^ r[1]] ^
-                        GaloisTable13[SubBytesInverse[x_faulty[10]^k[10]] ^ r[2]] 
-                      ];
-    return (A ^ B);
-}
-
-unsigned char Attack::ComputeFPrime3(unsigned char x[], unsigned char x_faulty[], vector<unsigned char> &r, vector<unsigned char> &k) {
-    unsigned char A = SubBytesInverse[
-                        GaloisTable9[SubBytesInverse[x[14]^k[14]] ^ r[6]] ^
-                        GaloisTable14[SubBytesInverse[x[11]^k[11]] ^ r[7]] ^
-                        GaloisTable11[SubBytesInverse[x[4] ^k[4] ] ^ r[4]] ^
-                        GaloisTable13[SubBytesInverse[x[1] ^k[1] ] ^ r[5]] 
-                      ];    
-    unsigned char B = SubBytesInverse[
-                        GaloisTable9[SubBytesInverse[x_faulty[14]^k[14]] ^ r[6]] ^
-                        GaloisTable14[SubBytesInverse[x_faulty[11]^k[11]] ^ r[7]] ^
-                        GaloisTable11[SubBytesInverse[x_faulty[4] ^k[4] ] ^ r[4]] ^
-                        GaloisTable13[SubBytesInverse[x_faulty[1] ^k[1] ] ^ r[5]] 
-                      ];
-    return (A ^ B);
-}
-/**
- * @brief Function which aborts execution and prints an error message to stderr.
- *
- * @param errorMessage  the error message to be printed to stderr
- */
-void Attack::throwErrorAndAbort(string errorMessage) {
-  cerr<<errorMessage<<endl;
-  cleanup(-1);
+void Attack::PrintKey(const uint8_t key[16]){
+  for(int i=0; i<16; i++){
+    printf("%02X", key[i]);
+  }
+  printf("\n");
 }
 
 #endif
