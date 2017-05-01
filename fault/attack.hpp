@@ -21,7 +21,7 @@ class Attack {
     private:
         FILE* target_in;
         FILE* target_out;
-        unsigned long interactions;
+        unsigned long interactions = 0;
         void (*cleanup)(int s);
         int keyFound = 0;
 
