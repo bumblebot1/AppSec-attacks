@@ -24,19 +24,19 @@ class Attack {
         int keyFound = 0;
 
     private:
-        void generateRandomMessage(uint8_t m[16]);
-        int setsEquation1(const uint8_t x[16], const uint8_t x1[16], uint8_t k[16][1024]);
-        int setsEquation2(const uint8_t x[16], const uint8_t x1[16], uint8_t k[16][1024]);
-        int setsEquation3(const uint8_t x[16], const uint8_t x1[16], uint8_t k[16][1024]);
-        int setsEquation4(const uint8_t x[16], const uint8_t x1[16], uint8_t k[16][1024]);
-        uint8_t fEquation1(const uint8_t x[16], const uint8_t x1[16], const uint8_t k[16], const uint8_t k9[16]);
-        uint8_t fEquation2(const uint8_t x[16], const uint8_t x1[16], const uint8_t k[16], const uint8_t k9[16]);
-        uint8_t fEquation3(const uint8_t x[16], const uint8_t x1[16], const uint8_t k[16], const uint8_t k9[16]);
-        uint8_t fEquation4(const uint8_t x[16], const uint8_t x1[16], const uint8_t k[16], const uint8_t k9[16]);
-        void printKey(const uint8_t state[16]);
-        void getOriginalKey(uint8_t k[16], int currentRound);
-        void getRoundK(uint8_t k[16], const int r);
-        void interact(uint8_t c[16], const int fault, const int r, const int f , const int p, const int i, const int j, const uint8_t m[16]);
+        void RandomMessage(uint8_t m[16]);
+        int Equation1(const uint8_t x[16], const uint8_t x1[16], uint8_t k[16][1024]);
+        int Equation2(const uint8_t x[16], const uint8_t x1[16], uint8_t k[16][1024]);
+        int Equation3(const uint8_t x[16], const uint8_t x1[16], uint8_t k[16][1024]);
+        int Equation4(const uint8_t x[16], const uint8_t x1[16], uint8_t k[16][1024]);
+        uint8_t SecondEquation1(const uint8_t x[16], const uint8_t x1[16], const uint8_t k[16], const uint8_t k9[16]);
+        uint8_t SecondEquation2(const uint8_t x[16], const uint8_t x1[16], const uint8_t k[16], const uint8_t k9[16]);
+        uint8_t SecondEquation3(const uint8_t x[16], const uint8_t x1[16], const uint8_t k[16], const uint8_t k9[16]);
+        uint8_t SecondEquation4(const uint8_t x[16], const uint8_t x1[16], const uint8_t k[16], const uint8_t k9[16]);
+        void PrintKey(const uint8_t state[16]);
+        void OriginalKey(uint8_t k[16], int currentRound);
+        void RoundKey(uint8_t k[16], const int r);
+        void Interact(uint8_t c[16], const int fault, const int r, const int f , const int p, const int i, const int j, const uint8_t m[16]);
     
     public:
         Attack(FILE* in, FILE* out, void (*clean)(int s));
@@ -50,7 +50,7 @@ Attack::Attack(FILE* in, FILE* out, void (*clean)(int s)){
 }
 
 // generate random messages for multiple measurements
-void Attack::generateRandomMessage(uint8_t m[16]){
+void Attack::RandomMessage(uint8_t m[16]){
   // open file to read random bytes from
   FILE *fp = fopen("/dev/urandom", "r");
   int character;
@@ -70,38 +70,36 @@ void Attack::Execute(){
   uint8_t faulty_c[16];
   uint8_t kAll[16][1024];
   int set1, set2, set3, set4;
-  uint8_t k[16];
-  uint8_t k9[16];
-  uint8_t result[16];
-  uint8_t f;
   int tested_keys = 0;
 
   // get random messages
-  generateRandomMessage(input);
+  RandomMessage(input);
 
-  interact(c, 0, 8, 1, 0, 0, 0, input);
-  interact(faulty_c, 1, 8, 1, 0, 0, 0, input);
+  Interact(c, 0, 8, 1, 0, 0, 0, input);
+  Interact(faulty_c, 1, 8, 1, 0, 0, 0, input);
 
   // k1, k8, k11, k14
-  set1 = setsEquation1(c, faulty_c, kAll);
+  set1 = Equation1(c, faulty_c, kAll);
   printf("%d possibilities for k1 , k8 , k11, k14\n", set1);
   // k5, k2, k15, k12
-  set2 = setsEquation2(c,faulty_c, kAll);
-  printf("%d possibilities for k5 , k2 , k15, k12\n", set2);
+  set2 = Equation2(c,faulty_c, kAll);
+  printf("%d possibilities for k2 , k5 , k12, k15\n", set2);
   // k9, k6, k3, k16
-  set3 = setsEquation3(c, faulty_c, kAll);
-  printf("%d possibilities for k9 , k6 , k3 , k16\n", set3);
+  set3 = Equation3(c, faulty_c, kAll);
+  printf("%d possibilities for k3 , k6 , k9 , k16\n", set3);
   // k13, k10, k7, k4
-  set4 = setsEquation4(c, faulty_c, kAll);
-  printf("%d possibilities for k13, k10, k7 , k4 \n", set4);
+  set4 = Equation4(c, faulty_c, kAll);
+  printf("%d possibilities for k4 , k7, k10 , k13\n", set4);
 
 
   printf("Computing last set of equations\n");
-  #pragma omp parallel for schedule(auto) private(k, k9, result, f)
+  #pragma omp parallel for
   for(int j1 = 0; j1< set1; j1++){
     for(int j2 = 0; j2 < set2; j2++){
       for(int j3 = 0; j3 < set3; j3++){
         for(int j4 = 0; j4 < set4; j4++){
+          uint8_t k[16];
+          uint8_t k9[16];
           // key guess after round 10
           k[0]  = kAll[0][j1];  k[7]  = kAll[7][j1];  k[10] = kAll[10][j1];   k[13] = kAll[13][j1];
           k[4]  = kAll[4][j2];  k[1]  = kAll[1][j2];  k[14] = kAll[14][j2];   k[11] = kAll[11][j2];
@@ -115,29 +113,30 @@ void Attack::Execute(){
           k9[12] = kAll[12][j4];  k9[9]  = kAll[9][j4];   k9[6]  = kAll[6][j4];   k9[3]  = kAll[3][j4];
 
           // get key from round 9
-          getRoundK(k9, 10);
+          RoundKey(k9, 10);
 
           // get result of equation
-          f = fEquation2(c, faulty_c, k, k9);
+          uint8_t f = SecondEquation2(c, faulty_c, k, k9);
 
           // check te above result against the other 3 results
-          if( f == fEquation3(c, faulty_c, k, k9) &&  (GaloisTable3[f] == fEquation4(c, faulty_c, k, k9)) && (GaloisTable2[f] == fEquation1(c, faulty_c, k, k9)) ) {
+          if( f == SecondEquation3(c, faulty_c, k, k9) &&  (GaloisTable3[f] == SecondEquation4(c, faulty_c, k, k9)) && (GaloisTable2[f] == SecondEquation1(c, faulty_c, k, k9)) ) {
             tested_keys = tested_keys + 1;
             if(tested_keys % 5 == 0)
               printf("potential keys tested: %d \n", tested_keys  );
             // get original key used for encryption
-            getOriginalKey(k9, 9);
+            OriginalKey(k9, 9);
 
             // simulate AES encryption using the retrieved key
             AES_KEY rk;
             AES_set_encrypt_key( k9, 128, &rk );
+            uint8_t result[16];
             AES_encrypt( input, result, &rk );
 
             // if result is right, found key
             if( !memcmp( result, c, 16 * sizeof( uint8_t ) ) ) {
               printf("potential keys tested: %d \n", tested_keys  );
               printf( "Key found: ");
-              printKey(k9);
+              PrintKey(k9);
               printf("interactions with the oracle: %d\n", interactionCount);
               keyFound = 1;
               exit(EXIT_SUCCESS);
@@ -150,7 +149,7 @@ void Attack::Execute(){
   printf("!!!!!!Key not found, something might have gone wrong, try again !!!!\n");
 }
 
-void Attack::interact(uint8_t c[16], const int fault, const int r, const int f , const int p, const int i, const int j, const uint8_t m[16]) {
+void Attack::Interact(uint8_t c[16], const int fault, const int r, const int f , const int p, const int i, const int j, const uint8_t m[16]) {
   if(fault) {
     fprintf( target_in, "%d,%d,%d,%d,%d", r, f, p, i, j );
   }
@@ -172,7 +171,7 @@ void Attack::interact(uint8_t c[16], const int fault, const int r, const int f ,
 }
 
 
-int Attack::setsEquation1(const uint8_t x[16], const uint8_t x1[16], uint8_t kAll[16][1024] ){
+int Attack::Equation1(const uint8_t x[16], const uint8_t x1[16], uint8_t kAll[16][1024] ){
   int k1, k8, k11, k14, delta;
   int possibilities;
   possibilities = 0;
@@ -204,7 +203,7 @@ int Attack::setsEquation1(const uint8_t x[16], const uint8_t x1[16], uint8_t kAl
 }
 
 
-int Attack::setsEquation2(const uint8_t x[16], const uint8_t x1[16], uint8_t kAll[16][1024] ){
+int Attack::Equation2(const uint8_t x[16], const uint8_t x1[16], uint8_t kAll[16][1024] ){
   int k5, k2, k15, k12, delta;
   int possibilities = 0;
   for(delta=1; delta <= 0xFF; delta++){
@@ -236,7 +235,7 @@ int Attack::setsEquation2(const uint8_t x[16], const uint8_t x1[16], uint8_t kAl
   return possibilities;
 }
 
-int Attack::setsEquation3(const uint8_t x[16], const uint8_t x1[16], uint8_t kAll[16][1024] ){
+int Attack::Equation3(const uint8_t x[16], const uint8_t x1[16], uint8_t kAll[16][1024] ){
   int k9, k6, k3, k16, delta;
   int possibilities = 0;
   for(delta=1; delta <= 0xFF; delta++){
@@ -267,7 +266,7 @@ int Attack::setsEquation3(const uint8_t x[16], const uint8_t x1[16], uint8_t kAl
   return possibilities;
 }
 
-int Attack::setsEquation4(const uint8_t x[16], const uint8_t x1[16], uint8_t kAll[16][1024] ){
+int Attack::Equation4(const uint8_t x[16], const uint8_t x1[16], uint8_t kAll[16][1024] ){
   int k13, k10, k7, k4, delta;
   int possibilities = 0;
   for(delta=1; delta <= 0xFF; delta++){
@@ -298,7 +297,7 @@ int Attack::setsEquation4(const uint8_t x[16], const uint8_t x1[16], uint8_t kAl
   return possibilities;
 }
 
-uint8_t Attack::fEquation1(const uint8_t x[16], const uint8_t x1[16], const uint8_t k[16], const uint8_t k9[16]){
+uint8_t Attack::SecondEquation1(const uint8_t x[16], const uint8_t x1[16], const uint8_t k[16], const uint8_t k9[16]){
   uint8_t a, b;
 
   a = GaloisTable14[inv_s[ x[0]  ^  k[0] ] ^ k9[0] ] ^
@@ -314,7 +313,7 @@ uint8_t Attack::fEquation1(const uint8_t x[16], const uint8_t x1[16], const uint
   return inv_s[a] ^ inv_s[b];
 }
 
-uint8_t Attack::fEquation2(const uint8_t x[16], const uint8_t x1[16], const uint8_t k[16], const uint8_t k9[16]){
+uint8_t Attack::SecondEquation2(const uint8_t x[16], const uint8_t x1[16], const uint8_t k[16], const uint8_t k9[16]){
   uint8_t a, b;
 
   a = GaloisTable9 [ inv_s[ x[12] ^ k[12] ] ^ k9[12] ] ^
@@ -330,7 +329,7 @@ uint8_t Attack::fEquation2(const uint8_t x[16], const uint8_t x1[16], const uint
   return inv_s[a] ^ inv_s[b];
 }
 
-uint8_t Attack::fEquation3(const uint8_t x[16], const uint8_t x1[16], const uint8_t k[16], const uint8_t k9[16]){
+uint8_t Attack::SecondEquation3(const uint8_t x[16], const uint8_t x1[16], const uint8_t k[16], const uint8_t k9[16]){
   uint8_t a, b;
   a = GaloisTable13[inv_s[ x[8]  ^  k[8] ] ^ k9[8] ] ^
       GaloisTable9 [inv_s[ x[5]  ^  k[5] ] ^ k9[9] ] ^
@@ -345,7 +344,7 @@ uint8_t Attack::fEquation3(const uint8_t x[16], const uint8_t x1[16], const uint
   return inv_s[a] ^ inv_s[b];
 }
 
-uint8_t Attack::fEquation4(const uint8_t x[16], const uint8_t x1[16], const uint8_t k[16], const uint8_t k9[16]){
+uint8_t Attack::SecondEquation4(const uint8_t x[16], const uint8_t x1[16], const uint8_t k[16], const uint8_t k9[16]){
   uint8_t a ,b;
 
 
@@ -362,13 +361,13 @@ uint8_t Attack::fEquation4(const uint8_t x[16], const uint8_t x1[16], const uint
   return inv_s[a] ^ inv_s[b];
 }
 
-void Attack::getOriginalKey(uint8_t k[16], int currentRound){
+void Attack::OriginalKey(uint8_t k[16], int currentRound){
   for(int i=currentRound; i>0; i--){
-    getRoundK(k, i);
+    RoundKey(k, i);
   }
 }
 
-void Attack::getRoundK(uint8_t k[16], const int r){
+void Attack::RoundKey(uint8_t k[16], const int r){
   k[12] ^=  k[8];
   k[13] ^=  k[9];
   k[14] ^=  k[10];
@@ -390,7 +389,7 @@ void Attack::getRoundK(uint8_t k[16], const int r){
   k[3] ^=  s[k[12]];
 }
 
-void Attack::printKey(const uint8_t key[16]){
+void Attack::PrintKey(const uint8_t key[16]){
   for(int i=0; i<16; i++){
     printf("%02X", key[i]);
   }
