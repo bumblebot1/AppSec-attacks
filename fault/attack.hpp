@@ -15,6 +15,8 @@
 #include "aes_params.hpp"
 #include <openssl/aes.h>
 
+#define sampleSize 1
+
 class Attack {
     private:
         FILE* target_in;
@@ -24,6 +26,7 @@ class Attack {
         int keyFound = 0;
 
     private:
+	void generateRandomMessage(uint8_t m[sampleSize][16]);
         int setsEquation1(const uint8_t x[][16], const uint8_t x1[][16], uint8_t k[16][1024]);
         int setsEquation2(const uint8_t x[][16], const uint8_t x1[][16], uint8_t k[16][1024]);
         int setsEquation3(const uint8_t x[][16], const uint8_t x1[][16], uint8_t k[16][1024]);
@@ -40,11 +43,11 @@ class Attack {
     public:
         Attack(FILE* in, FILE* out, void (*clean)(int s));
         void Execute();
-}
+};
 
 
 // generate random messages for multiple measurements
-void generateRandomMessage(uint8_t m[sampleSize][16]){
+void Attack::generateRandomMessage(uint8_t m[sampleSize][16]){
   // open file to read random bytes from
   FILE *fp = fopen("/dev/urandom", "r");
   int character;
