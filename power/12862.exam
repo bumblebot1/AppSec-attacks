@@ -1,8 +1,36 @@
 Q.1 As a security consultant, you have been working on a prototype of the
     attack target; before the product is deployed, the vendor is willing to
     make any alteration necessary (in software or hardware) to prevent the
-    attack.  Explain the options available, and which one you would
+    attack. Explain the options available, and which one you would
     recommend.
+
+    Assuming we only alter the underlying software or hardware and not the protocol of 
+    decryption we have 2 options available to us:
+    1) Masking: i.e applying a reversible transformation to the intermediate values
+    in the calculations. Ideally this means that the actual processing is performed with
+    randomised values and thus the power traces will be independent of the actual values
+    from the calculation. As this is a software based alteration, this does not require
+    any changes to the hardware specifications of the device.
+
+    2) Hiding: i.e making the power consumption appear to be random or constant.
+    An indirect method of altering the power consumption is to hide the time dimension
+    of the execution which has the effect of making the power consumption trace appear
+    randomised. Two software solutions one can employ are randomly performing 
+    dummy operations (NOP instructions or instructions with random data) and 
+    shuffling (changing the sequence of the S-box look-ups at random).
+    A second method which directly impacts the power consumption is to hide the 
+    amplitude dimension by lowering the SNR. This can be achieve by either 
+    reducing the signal such that an equal amount of power is used to perform all operations
+    and for all data values essentially giving us a set of power traces which appears constant
+    (this can be achieved by performing independent operations in parallel)
+    or by increasing the noise which would, simillarly to the masking countermeasure,
+    make the power consumption appear random(this can be done by filtering the power net).
+
+    My recomendation would be to use masking as well as hiding the time dimension as these
+    would be both software alterations and would be simpler to perform than manipulation
+    of the SNR which would likely require some hardware changes as well which, in general,
+    are more costly.
+
 Q.2 The vendor of the attack target opts to replace the 8-bit Intel 8051
     micro-processor with a modern, 32-bit ARM Cortex-M0; they supplement it
     with hardware support for that allows single-cycle operations on 32
@@ -10,10 +38,26 @@ Q.2 The vendor of the attack target opts to replace the 8-bit Intel 8051
     encryption or decryption, but they *also* want to know if it might make
     the device more secure wrt.  DPA attacks: what is your assessment, and
     why ?
+
+    By changing to a 32-bit instruction architecture we will require a much
+    larger amount of traces in order for the attack to be successfull. The problem
+    is that by having 32-bit single-cycle operations we will have to default 
+    to guessing blocks of 32-bits of the key every time. This will make it much harder
+    since the likelihood that 2 given hypotheses for a 32 bit block guess will produce a similar
+    trace given our model (in this case I assumed it is the Hamming weight) is much higher than before
+    which means that we will require significantly more traces in order to obtain a correct guess.
+    That being said, the performance of the attack is entirely dependent on the model for the 
+    consumption so it is possible that models better than the Hamming weight could be found in this case.
+    In conclusion, I believe the device will be more secure vs a power attack with a 32-bit processor than 
+    with an 8-bit processor, however it is entirely possible that a well-resourced attacker could still perform 
+    a 32-bit DPA attack if he manages to acquire a large amount of power traces.
+
 Q.3 DPA attacks work because statistics can (to some degree) remove the
     noise within power consumption traces.  Explain the concepts of signal,
     noise and signal-to-noise ratio, and the role each has in a DPA attack
     of this type.
+    
+
 Q.4 DPA attacks include a statistical analysis step, for which one option
     is use of the t-test.  Explain what the difference between a standard
     t-test and Kocher's method is.  Given that in a DPA attack one might
