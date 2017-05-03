@@ -30,14 +30,14 @@ class Attack {
 
     private:
         void RandomMessage(uint8_t m[16]);
-        int Equation1(const uint8_t x[16], const uint8_t x1[16]);
-        int Equation2(const uint8_t x[16], const uint8_t x1[16]);
-        int Equation3(const uint8_t x[16], const uint8_t x1[16]);
-        int Equation4(const uint8_t x[16], const uint8_t x1[16]);
-        uint8_t SecondEquation1(const uint8_t x[16], const uint8_t x1[16], const uint8_t k[16], const uint8_t k9[16]);
-        uint8_t SecondEquation2(const uint8_t x[16], const uint8_t x1[16], const uint8_t k[16], const uint8_t k9[16]);
-        uint8_t SecondEquation3(const uint8_t x[16], const uint8_t x1[16], const uint8_t k[16], const uint8_t k9[16]);
-        uint8_t SecondEquation4(const uint8_t x[16], const uint8_t x1[16], const uint8_t k[16], const uint8_t k9[16]);
+        int Equation1(const uint8_t c[16], const uint8_t c_fault[16]);
+        int Equation2(const uint8_t c[16], const uint8_t c_fault[16]);
+        int Equation3(const uint8_t c[16], const uint8_t c_fault[16]);
+        int Equation4(const uint8_t c[16], const uint8_t c_fault[16]);
+        uint8_t SecondEquation1(const uint8_t c[16], const uint8_t c_fault[16], const uint8_t k[16], const uint8_t k9[16]);
+        uint8_t SecondEquation2(const uint8_t c[16], const uint8_t c_fault[16], const uint8_t k[16], const uint8_t k9[16]);
+        uint8_t SecondEquation3(const uint8_t c[16], const uint8_t c_fault[16], const uint8_t k[16], const uint8_t k9[16]);
+        uint8_t SecondEquation4(const uint8_t c[16], const uint8_t c_fault[16], const uint8_t k[16], const uint8_t k9[16]);
         void PrintKey(const uint8_t key[16]);
         void OriginalKey(uint8_t k[16], int currentRound);
         void RoundKey(uint8_t k[16], const int r);
@@ -176,22 +176,22 @@ void Attack::Interact(uint8_t c[16], const int fault, const int r, const int f ,
 }
 
 
-int Attack::Equation1(const uint8_t x[16], const uint8_t x1[16]){
+int Attack::Equation1(const uint8_t c[16], const uint8_t c_fault[16]){
   int k1, k8, k11, k14, delta;
   int possibilities;
   possibilities = 0;
   for(delta=1; delta <= 0xFF; delta++){
     for(k1 = 0; k1 <= 0xFF; k1++){
-      if(GaloisTable2[delta] == (inv_s[x[0] ^ k1] ^ inv_s[x1[0] ^ k1]) ){
+      if(GaloisTable2[delta] == (inv_s[c[0] ^ k1] ^ inv_s[c_fault[0] ^ k1]) ){
 
       for(k14 = 0; k14 <= 0xFF; k14++){
-        if(delta == (inv_s[x[13]^ k14] ^ inv_s[x1[13] ^ k14]) )
+        if(delta == (inv_s[c[13]^ k14] ^ inv_s[c_fault[13] ^ k14]) )
 
         for(k11 = 0; k11<= 0xFF; k11++){
-          if(delta == (inv_s[x[10] ^ k11] ^ inv_s[x1[10] ^ k11]) )
+          if(delta == (inv_s[c[10] ^ k11] ^ inv_s[c_fault[10] ^ k11]) )
 
           for(k8 = 0; k8<= 0xFF; k8++){
-            if(GaloisTable3[delta] == (inv_s[x[7] ^ k8] ^ inv_s[x1[7] ^ k8]) ){
+            if(GaloisTable3[delta] == (inv_s[c[7] ^ k8] ^ inv_s[c_fault[7] ^ k8]) ){
               kAll[0].push_back(k1);
               kAll[7].push_back(k8);
               kAll[10].push_back(k11);
@@ -208,22 +208,22 @@ int Attack::Equation1(const uint8_t x[16], const uint8_t x1[16]){
 }
 
 
-int Attack::Equation2(const uint8_t x[16], const uint8_t x1[16]){
+int Attack::Equation2(const uint8_t c[16], const uint8_t c_fault[16]){
   int k5, k2, k15, k12, delta;
   int possibilities = 0;
   for(delta=1; delta <= 0xFF; delta++){
     
     for(k5 = 0; k5 <= 0xFF; k5++){
-      if(delta == (inv_s[x[4] ^ k5] ^ inv_s[x1[4] ^ k5]) ){
+      if(delta == (inv_s[c[4] ^ k5] ^ inv_s[c_fault[4] ^ k5]) ){
         
         for(k2 = 0; k2 <= 0xFF; k2++){
-          if(delta == (inv_s[x[1]^ k2] ^ inv_s[x1[1] ^ k2]) )
+          if(delta == (inv_s[c[1]^ k2] ^ inv_s[c_fault[1] ^ k2]) )
           
           for(k15 = 0; k15<= 0xFF; k15++){
-            if(GaloisTable3[delta]== (inv_s[x[14] ^ k15] ^ inv_s[x1[14] ^ k15]) )
+            if(GaloisTable3[delta]== (inv_s[c[14] ^ k15] ^ inv_s[c_fault[14] ^ k15]) )
             
             for(k12 = 0; k12<= 0xFF; k12++){
-              if(GaloisTable2[delta] == (inv_s[x[11] ^ k12] ^ inv_s[x1[11] ^ k12]) ){
+              if(GaloisTable2[delta] == (inv_s[c[11] ^ k12] ^ inv_s[c_fault[11] ^ k12]) ){
                 kAll[1].push_back(k2);
                 kAll[4].push_back(k5);
                 kAll[11].push_back(k12);
@@ -240,22 +240,22 @@ int Attack::Equation2(const uint8_t x[16], const uint8_t x1[16]){
   return possibilities;
 }
 
-int Attack::Equation3(const uint8_t x[16], const uint8_t x1[16]){
+int Attack::Equation3(const uint8_t c[16], const uint8_t c_fault[16]){
   int k9, k6, k3, k16, delta;
   int possibilities = 0;
   for(delta=1; delta <= 0xFF; delta++){
     
     for(k9 = 0; k9 <= 0xFF; k9++){
-      if(delta == (inv_s[x[8] ^ k9] ^ inv_s[x1[8] ^ k9]) ){
+      if(delta == (inv_s[c[8] ^ k9] ^ inv_s[c_fault[8] ^ k9]) ){
 
         for(k6 = 0; k6 <= 0xFF; k6++){
-          if(GaloisTable3[delta] == (inv_s[x[5]^ k6] ^ inv_s[x1[5] ^ k6]) )
+          if(GaloisTable3[delta] == (inv_s[c[5]^ k6] ^ inv_s[c_fault[5] ^ k6]) )
 
           for(k3 = 0; k3<= 0xFF; k3++){
-            if(GaloisTable2[delta] == (inv_s[x[2] ^ k3] ^ inv_s[x1[2] ^ k3]) )
+            if(GaloisTable2[delta] == (inv_s[c[2] ^ k3] ^ inv_s[c_fault[2] ^ k3]) )
 
             for(k16 = 0; k16<= 0xFF; k16++){
-              if(delta == (inv_s[x[15] ^ k16] ^ inv_s[x1[15] ^ k16]) ){
+              if(delta == (inv_s[c[15] ^ k16] ^ inv_s[c_fault[15] ^ k16]) ){
                 kAll[2].push_back(k3);
                 kAll[5].push_back(k6);
                 kAll[8].push_back(k9);
@@ -271,22 +271,22 @@ int Attack::Equation3(const uint8_t x[16], const uint8_t x1[16]){
   return possibilities;
 }
 
-int Attack::Equation4(const uint8_t x[16], const uint8_t x1[16]){
+int Attack::Equation4(const uint8_t c[16], const uint8_t c_fault[16]){
   int k13, k10, k7, k4, delta;
   int possibilities = 0;
   for(delta=1; delta <= 0xFF; delta++){
     
     for(k13 = 0; k13 <= 0xFF; k13++){
-      if(GaloisTable3[delta] == (inv_s[x[12] ^ k13] ^ inv_s[x1[12] ^ k13]) ){
+      if(GaloisTable3[delta] == (inv_s[c[12] ^ k13] ^ inv_s[c_fault[12] ^ k13]) ){
 
         for(k10 = 0; k10 <= 0xFF; k10++){
-          if( GaloisTable2[delta] == (inv_s[x[9]^ k10] ^ inv_s[x1[9] ^ k10]) )
+          if( GaloisTable2[delta] == (inv_s[c[9]^ k10] ^ inv_s[c_fault[9] ^ k10]) )
 
           for(k7 = 0; k7<= 0xFF; k7++){
-            if(delta == (inv_s[x[6] ^ k7] ^ inv_s[x1[6] ^ k7]) )
+            if(delta == (inv_s[c[6] ^ k7] ^ inv_s[c_fault[6] ^ k7]) )
 
             for(k4 = 0; k4<= 0xFF; k4++){
-              if(delta == (inv_s[x[3] ^ k4] ^ inv_s[x1[3] ^ k4]) ){
+              if(delta == (inv_s[c[3] ^ k4] ^ inv_s[c_fault[3] ^ k4]) ){
                 kAll[3].push_back(k4);
                 kAll[6].push_back(k7);
                 kAll[9].push_back(k10);
@@ -302,66 +302,66 @@ int Attack::Equation4(const uint8_t x[16], const uint8_t x1[16]){
   return possibilities;
 }
 
-uint8_t Attack::SecondEquation1(const uint8_t x[16], const uint8_t x1[16], const uint8_t k[16], const uint8_t k9[16]){
+uint8_t Attack::SecondEquation1(const uint8_t c[16], const uint8_t c_fault[16], const uint8_t k[16], const uint8_t k9[16]){
   uint8_t a, b;
 
-  a = GaloisTable14[inv_s[ x[0]  ^  k[0] ] ^ k9[0] ] ^
-      GaloisTable11[inv_s[ x[13] ^ k[13] ] ^ k9[1] ] ^
-      GaloisTable13[inv_s[ x[10] ^ k[10] ] ^ k9[2] ] ^
-      GaloisTable9 [inv_s[ x[7]  ^  k[7] ] ^ k9[3] ];
+  a = GaloisTable14[inv_s[ c[0]  ^  k[0] ] ^ k9[0] ] ^
+      GaloisTable11[inv_s[ c[13] ^ k[13] ] ^ k9[1] ] ^
+      GaloisTable13[inv_s[ c[10] ^ k[10] ] ^ k9[2] ] ^
+      GaloisTable9 [inv_s[ c[7]  ^  k[7] ] ^ k9[3] ];
   
-  b = GaloisTable14[inv_s[ x1[0]  ^  k[0] ] ^ k9[0] ] ^
-      GaloisTable11[inv_s[ x1[13] ^ k[13] ] ^ k9[1] ] ^
-      GaloisTable13[inv_s[ x1[10] ^ k[10] ] ^ k9[2] ] ^
-      GaloisTable9 [inv_s[ x1[7]  ^  k[7] ] ^ k9[3] ];
+  b = GaloisTable14[inv_s[ c_fault[0]  ^  k[0] ] ^ k9[0] ] ^
+      GaloisTable11[inv_s[ c_fault[13] ^ k[13] ] ^ k9[1] ] ^
+      GaloisTable13[inv_s[ c_fault[10] ^ k[10] ] ^ k9[2] ] ^
+      GaloisTable9 [inv_s[ c_fault[7]  ^  k[7] ] ^ k9[3] ];
 
   return inv_s[a] ^ inv_s[b];
 }
 
-uint8_t Attack::SecondEquation2(const uint8_t x[16], const uint8_t x1[16], const uint8_t k[16], const uint8_t k9[16]){
+uint8_t Attack::SecondEquation2(const uint8_t c[16], const uint8_t c_fault[16], const uint8_t k[16], const uint8_t k9[16]){
   uint8_t a, b;
 
-  a = GaloisTable9 [ inv_s[ x[12] ^ k[12] ] ^ k9[12] ] ^
-      GaloisTable14[ inv_s[ x[9]  ^  k[9] ] ^ k9[13] ] ^
-      GaloisTable11[ inv_s[ x[6]  ^  k[6] ] ^ k9[14] ] ^
-      GaloisTable13[ inv_s[ x[3]  ^  k[3] ] ^ k9[15] ];
+  a = GaloisTable9 [ inv_s[ c[12] ^ k[12] ] ^ k9[12] ] ^
+      GaloisTable14[ inv_s[ c[9]  ^  k[9] ] ^ k9[13] ] ^
+      GaloisTable11[ inv_s[ c[6]  ^  k[6] ] ^ k9[14] ] ^
+      GaloisTable13[ inv_s[ c[3]  ^  k[3] ] ^ k9[15] ];
 
-  b = GaloisTable9 [ inv_s[ x1[12] ^ k[12] ] ^  k9[12] ] ^
-      GaloisTable14[ inv_s[ x1[9]  ^  k[9] ] ^  k9[13] ] ^
-      GaloisTable11[ inv_s[ x1[6]  ^  k[6] ] ^  k9[14] ] ^
-      GaloisTable13[ inv_s[ x1[3]  ^  k[3] ] ^  k9[15] ];
+  b = GaloisTable9 [ inv_s[ c_fault[12] ^ k[12] ] ^  k9[12] ] ^
+      GaloisTable14[ inv_s[ c_fault[9]  ^  k[9] ] ^  k9[13] ] ^
+      GaloisTable11[ inv_s[ c_fault[6]  ^  k[6] ] ^  k9[14] ] ^
+      GaloisTable13[ inv_s[ c_fault[3]  ^  k[3] ] ^  k9[15] ];
 
   return inv_s[a] ^ inv_s[b];
 }
 
-uint8_t Attack::SecondEquation3(const uint8_t x[16], const uint8_t x1[16], const uint8_t k[16], const uint8_t k9[16]){
+uint8_t Attack::SecondEquation3(const uint8_t c[16], const uint8_t c_fault[16], const uint8_t k[16], const uint8_t k9[16]){
   uint8_t a, b;
-  a = GaloisTable13[inv_s[ x[8]  ^  k[8] ] ^ k9[8] ] ^
-      GaloisTable9 [inv_s[ x[5]  ^  k[5] ] ^ k9[9] ] ^
-      GaloisTable14[inv_s[ x[2]  ^  k[2] ] ^ k9[10]] ^
-      GaloisTable11[inv_s[ x[15] ^ k[15] ] ^ k9[11]];
+  a = GaloisTable13[inv_s[ c[8]  ^  k[8] ] ^ k9[8] ] ^
+      GaloisTable9 [inv_s[ c[5]  ^  k[5] ] ^ k9[9] ] ^
+      GaloisTable14[inv_s[ c[2]  ^  k[2] ] ^ k9[10]] ^
+      GaloisTable11[inv_s[ c[15] ^ k[15] ] ^ k9[11]];
           
-  b = GaloisTable13[inv_s[ x1[8]  ^  k[8] ] ^ k9[8] ] ^
-      GaloisTable9 [inv_s[ x1[5]  ^  k[5] ] ^ k9[9] ] ^
-      GaloisTable14[inv_s[ x1[2]  ^  k[2] ] ^ k9[10]] ^
-      GaloisTable11[inv_s[ x1[15] ^ k[15] ] ^ k9[11]];
+  b = GaloisTable13[inv_s[ c_fault[8]  ^  k[8] ] ^ k9[8] ] ^
+      GaloisTable9 [inv_s[ c_fault[5]  ^  k[5] ] ^ k9[9] ] ^
+      GaloisTable14[inv_s[ c_fault[2]  ^  k[2] ] ^ k9[10]] ^
+      GaloisTable11[inv_s[ c_fault[15] ^ k[15] ] ^ k9[11]];
 
   return inv_s[a] ^ inv_s[b];
 }
 
-uint8_t Attack::SecondEquation4(const uint8_t x[16], const uint8_t x1[16], const uint8_t k[16], const uint8_t k9[16]){
+uint8_t Attack::SecondEquation4(const uint8_t c[16], const uint8_t c_fault[16], const uint8_t k[16], const uint8_t k9[16]){
   uint8_t a ,b;
 
 
-  a = GaloisTable11[inv_s[ x[4]  ^ k[4]  ] ^ k9[4]] ^
-      GaloisTable13[inv_s[ x[1]  ^ k[1]  ] ^ k9[5]] ^
-      GaloisTable9 [inv_s[ x[14] ^ k[14] ] ^ k9[6]] ^
-      GaloisTable14[inv_s[ x[11] ^ k[11] ] ^ k9[7]];
+  a = GaloisTable11[inv_s[ c[4]  ^ k[4]  ] ^ k9[4]] ^
+      GaloisTable13[inv_s[ c[1]  ^ k[1]  ] ^ k9[5]] ^
+      GaloisTable9 [inv_s[ c[14] ^ k[14] ] ^ k9[6]] ^
+      GaloisTable14[inv_s[ c[11] ^ k[11] ] ^ k9[7]];
   
-  b = GaloisTable11[inv_s[ x1[4]  ^ k[4]  ] ^ k9[4]] ^
-      GaloisTable13[inv_s[ x1[1]  ^ k[1]  ] ^ k9[5]] ^
-      GaloisTable9 [inv_s[ x1[14] ^ k[14] ] ^ k9[6]] ^
-      GaloisTable14[inv_s[ x1[11] ^ k[11] ] ^ k9[7]];
+  b = GaloisTable11[inv_s[ c_fault[4]  ^ k[4]  ] ^ k9[4]] ^
+      GaloisTable13[inv_s[ c_fault[1]  ^ k[1]  ] ^ k9[5]] ^
+      GaloisTable9 [inv_s[ c_fault[14] ^ k[14] ] ^ k9[6]] ^
+      GaloisTable14[inv_s[ c_fault[11] ^ k[11] ] ^ k9[7]];
 
   return inv_s[a] ^ inv_s[b];
 }
