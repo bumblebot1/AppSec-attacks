@@ -2,13 +2,114 @@ Q.1 Consider that instead of influencing data (e.g., the AES state), a
     fault might influence control-flow (e.g., a conditional statement)
     somehow during execution.  Stating any assumptions you make, give an
     alternative attack strategy based on this ability.
+
+    There are multiple ways in which an attack strategy could exploit a fault induced in the control-flow.
+    One simple example would be to manipulate the conditional branch of the loop over the number of rounds of the
+    AES encryption function such that only the 0th and the last rounds are performed. By obtaining two faulty 
+    cyphertexts using this fault one can apply the attack strategy from the following paper:
+    [Round Reduction Using Faults by Hamid Choukri and Michael Tunstall] which consists of:
+    
+    Xoring the two faulty cyphertexts obtained from the target (this operation cancels the effect of the final
+    add round key function) and obtaining an equation for the initial key.
+    The equation is:
+    SubBytes(m1 + k) + SubBytes(m2 + k) = c1 + c2, where k is the key we aim to recover (the initial round key).
+    The shift rows function has been ignored since it is an easily reversible bytewise permutation.
+    This makes the recovery of the key an exhaustive search over 2^16 possibilities, as stated in the paper we 
+    get on average 2 hypotheses for each byte of the key, which is clearly a tractable amount.  
+
+
+
 Q.2 Outline the methods available for hardening this AES implementation
     against fault attacks; for each method, explain any assumptions you
     make and compare it with the others wrt.  metrics such as robustness,
     latency, and memory footprint.
+
+    There are various ways by which the AES implementation could be hardened against fault attacks.
+    The main idea is that, a fault should be detected either via software measures before any result
+    is sent to the output or via hardware when it is happening. In the given context of a fault 
+    being induced as a clock glitch the following seem most applicable:
+    
+    1)Adding a glitch sensor to the smart-card can ensure that the clock signal fed into it is 
+    not manipulated in such a way as to induce a fault during the execution of the AES functions.
+    This method would be harware based so the latency and memory footprints should be minimal, while offering
+    robustness against faults induced by irregular clock signals. This method doesn't, unfortunately, protect
+    against faults produced by other means such as power glitches or faults induced by laser/light.
+
+    2)Perform both an encryption as well as a decryption of the plaintext received by the target. This 
+    would ensure that there have been no faults induced during the process of the encryption and thus 
+    could detect fault injections regardless of the nondeterministic nature of the encryption function.
+    This method would fare worse than the sensor method in terms of latency since it will require
+    around twice the amount of time to output as well as more memory since the result of the decryption
+    will need to be stored in order to be compared to the initial plaintext. This method, however,
+    offers a lot more in terms of robustness as it does not depend on the type of fault being induced.
+    It is possbile, though very unlikely, that both the encryption and decryption phases have been 
+    injected with a fault in which case a fault may pass through undetected.
+
+    3)Perform the encryption twice. Given that this is a vanila AES implementation the encryption is not randomised
+    therefore we can exploit this to check if we get the same cyphertext after running the encryption algorithm
+    twice. If we do not that means we detect a fault. This method, by the latency and memory footprint metrics,
+    is similar to the second method however it is in itself a flaw of the encryption algorithm chosen. Ideally,
+    this check should not be possible as the encryption algorithm should be nondeterministic to offer meaningfull
+    security guarantees. That being said, this check, similarly to the second is not dependent on the type of fault
+    although it can again allow a fault to go undetected if it produces the same effects in both encryption phases
+    though this is highly unlikely.
+
+    If we were to consider other fault injection mechanisms other than an irregular clock signal then there are 
+    also other potentially methods for hardening but given the context these 3 seem the most applicable. Out of the 3
+    my recommendation would be a combination of methods 2 and 1 because method 2 covers a broader spectrum of faults
+    whereas method 1 can potentially act as a sanity check in the case when method 2 fails. Method 3, although similar
+    in performance with 2 should not be made available in the first place as it poses in itself a risk to the 
+    AES implementation and, ideally, the vanila AES would be replaced by a nondeterministic mode of operation.
+
+
+
 Q.3 The question outlines one method to induce faults (i.e., via a clock
     glitch).  For the same attack target, construct a set of alternative
     methods and explain whether they seem applicable given the context.
+
+    We have the following methods of inducing faults available:
+    1)Power supply glitch: Given that the attack target was susceptible to a fault induce via an irregular clock signal,
+    and thus an externally provided clock signal, it is possible that an attacker can manipulate 
+    the power supply of the device to induce glitches. This would not be possible for newer or 
+    security specific devices.
+
+    2)Test Circuits: Devices can have currently disconnected circuits which were previously used in testing. An attacker
+    could possibly find and reconnect these in order to induce faults. This is generally a difficult method to employ
+    as the attacker would need considerable knowledge of the location of these circuits as well as to reattach these
+    in order to make inducing faults a possibility. (it's possible that these test circuits may even get destroyed completely
+    after the testing phase making this option unusable)
+
+    3)Microprobing: It may be possible for an attacker to read data directly of the smart card via a needle and thus 
+    directly read part of the key which would then simplify key recovery. Additionally, if the smart card has easily
+    accessible memory one can perform some calculation with it(like an encryption) and then do a rapid cooling of 
+    the memory which could help him directly access part or even all of the key bits.
+    
+    4)Light: Another possible strategy for inducing a fault would be to use a Focused Ion Beam(if the attacker has the resources)
+    or a laser of camera flash in order to flip some of the bits in the memory of the chip.
+
+    5)Nail Varnish: This could be directly applied on older smart cards to make the card not execute some operations and thus
+    could be used as a strategy to induce faults.
+
+    Out of these 5 fault inducing methods I believe that method 4 is the most applicable due to it being able to target both
+    older and newer chips. If we consider the target to be an older smart card I believe method 1 can also work quite well. 
+    Method 2 is possible although the manufacturer of the chip should make it very unlikely. Method 3 might also work
+    rather well although it may be more difficult to achieve than method 4. 
+    Method 5 is the least likely to work if the chip is new and also poses the most risk of destroying the chip.
+    As such, method 4, using the light on the memory of the chip, is my recommendation.
+
+
+
 Q.6 One way to reduce the effectiveness of DPA attacks on AES is to use a
     masking countermeasure.  Explain if and why the *same* countermeasure
     could also have an impact on the effectiveness of fault attacks.
+
+    The same countermeasure does not offer the same level of protection against a fault attack.
+    Specifically, if a fault is injected into the masked intermediate value processed in the 
+    last round of the AES function it is possible to recover the correct key from a faulty
+    and a correct encryption. One attack which achieves this is described in the following paper:
+    [Masking Does Not Protect Against Differential Fault Attacks by Arnaud Boscher and Helena Handschuh].
+    This is entirely dependent on the masking scheme used, of course, so there may be specific schemes
+    for which successfull attacks have not been developped yet, however the existing attacks for the
+    boolean masking scheme or multiplicative masking scheme signal that masking is not a safe 
+    countermeasure for a fault attack and that other, more effective methods, such as those outlined 
+    in Q2 should be used to increase the resiliency of the AES implementation.

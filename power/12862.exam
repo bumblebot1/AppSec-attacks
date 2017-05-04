@@ -31,6 +31,8 @@ Q.1 As a security consultant, you have been working on a prototype of the
     of the SNR which would likely require some hardware changes as well which, in general,
     are more costly.
 
+
+
 Q.2 The vendor of the attack target opts to replace the 8-bit Intel 8051
     micro-processor with a modern, 32-bit ARM Cortex-M0; they supplement it
     with hardware support for that allows single-cycle operations on 32
@@ -52,6 +54,8 @@ Q.2 The vendor of the attack target opts to replace the 8-bit Intel 8051
     with an 8-bit processor, however it is entirely possible that a well-resourced attacker could still perform 
     a 32-bit DPA attack if he manages to acquire a large amount of power traces.
 
+
+
 Q.3 DPA attacks work because statistics can (to some degree) remove the
     noise within power consumption traces.  Explain the concepts of signal,
     noise and signal-to-noise ratio, and the role each has in a DPA attack
@@ -71,6 +75,8 @@ Q.3 DPA attacks work because statistics can (to some degree) remove the
     and the noise and that the SNR is directly proportional with the signal and inverse proportional with the noise,
     meaning when we increase the noise our SNR becomes smaller. Ideally, for a DPA attack to succeed, 
     we want the SNR to be high and,therefore, the noise to be low.
+
+
 
 Q.4 DPA attacks include a statistical analysis step, for which one option
     is use of the t-test.  Explain what the difference between a standard
