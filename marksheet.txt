@@ -16,7 +16,7 @@
 So that we can calibrate and improve the assignment in the future, give us
 a rough idea how long (in hours) you spent on it *in total*:
 
-effort : [40] hours
+effort : [50] hours
 
 -------------------------------------------------------------------------------
 
@@ -55,14 +55,14 @@ generality, realism, or style of a solution.
 
               target material : [3509CAA17214066D]
 
-[?] Stage 3 : an attack based on an injected fault
+[X] Stage 3 : an attack based on an injected fault
               - correct target material                              ( 40%)
               - solution quality wrt. efficiency, robustness etc.    ( 30%)
               - analysis questions                                   ( 30%)
 
-              target material : [...]
+              target material : [AAB3C151A6DA5CC216E55568253DF015]
 
-[?] Stage 4 : an attack based on power consumption
+[*] Stage 4 : an attack based on power consumption
               - correct target material                              ( 40%)
               - solution quality wrt. efficiency, robustness etc.    ( 30%)
               - analysis questions                                   ( 30%)
@@ -81,33 +81,26 @@ might be easy to overlook (e.g., a subtle issue or technique in associated
 source code) should go here:
 
 [
-  I have implemented both attacks in C++. I initially started an implementation 
-  in python of the oaep attack but I found it to be fairly slow so I switched 
-  to c++. My program uses -std=c++11 option. I have tested with version 5.4.0 of g++
-  and the version of the gmp library I have used in my development was 6.1.0
+ I have implemented both attacks in C++.
 
-  Error messages are printed to stderr and only the attack results are printed
-  to stdout.
+ The fault attack follows the paper by Tunstall et al. and works by computing the
+ set of equations for the values of delta and then using the key hypotheses obtained
+ together with the f equations in order to derive key guesses which are then verified
+ with an encryption procedure only if they pass these 2 constraints. I have also
+ parallelised the main loop over the possibilities returned from the delta equations
+ in order to speed up the calculations.
 
-  The OAEP attack follows Manger's paper. I have also implemented the EME-OAEP
-  decode function in order to recover the actual unpacked plaintext.
-  I have not covered the case for when 2*B>=N so that would be one improvement
-  that could be made to this part.
-
-  The timing attack follows the paper by Dhem et al.
-  I have used the .R replica to calculate an estimate of how many clock cycles 
-  a single multiplication takes. This is helpful as it allows me to estimate the number of
-  multiplications that will be executed given my private key. This is very helpful
-  in allowing me to restart the attack if too many operations have been 
-  executed thus having a major impact on performance. Furthermore, I also allow
-  the algorithm to backtrack once in order to account for possible errors in the 
-  decisions. This could be improved by allowing backtracking for lengths larger
-  than 1 bit which could improve performance when attacking very large keys since 
-  you would not have to stop mid-way so frequently and restart the process.
-  In order to distinguish between 0 and 1 I used the absolute value of the 
-  difference of the means. The way I am doing this is by having a threshold in place: 
-  if the absolute value of the difference is smaller than the threshold then I backtrack or 
-  restart the attack from the beggining, otherwise I predict the class with the larger mean.
+ The Power attack works only partially. If we consider the key k = k1||k2 I think I have
+ managed to recover the k2 part of the key as this remains constant even after running the
+ attack with more samples. The way my attack works is it first uses a set of random 128 bit
+ sector numbers (which can be more than the limit and thus allow us to recover all bits of the second key)
+ and the first part of the power traces corresponding to these to recover the
+ second key which is used to compute the tweak T in the encryption standard.
+ Afterwards, I take a set random sector numbers less than the limit imposed by the device,
+ I compute the tweak which is T = AES-ENC(K2, randSect) and xor this with the message corresponding
+ to the decryption done with this sector as parameter. Then I attempt to perform a DPA attack
+ on the decryption phase of the oracle query by attacking the INV-SubBytes operation.
+ I think my attack fails because
 ]
 
 -------------------------------------------------------------------------------
