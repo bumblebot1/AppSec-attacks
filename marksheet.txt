@@ -67,7 +67,7 @@ generality, realism, or style of a solution.
               - solution quality wrt. efficiency, robustness etc.    ( 30%)
               - analysis questions                                   ( 30%)
 
-              target material : [...]
+              target material : [4C56FB1DAA0380D8FFC8FF6E1707F897]
 
                                                                      ------
                                                                      (400%)
@@ -93,14 +93,15 @@ source code) should go here:
  The Power attack works only partially. If we consider the key k = k1||k2 I think I have
  managed to recover the k2 part of the key as this remains constant even after running the
  attack with more samples. The way my attack works is it first uses a set of random 128 bit
- sector numbers (which can be more than the limit and thus allow us to recover all bits of the second key)
+ sector numbers (which can be longer than the limit imposed by the device and thus allow us to recover all bits of the second key)
  and the first part of the power traces corresponding to these to recover the
  second key which is used to compute the tweak T in the encryption standard.
- Afterwards, I take a set random sector numbers less than the limit imposed by the device,
+ Afterwards, I take a set of random sector numbers less than the limit imposed by the device,
  I compute the tweak which is T = AES-ENC(K2, randSect) and xor this with the message corresponding
  to the decryption done with this sector as parameter. Then I attempt to perform a DPA attack
  on the decryption phase of the oracle query by attacking the INV-SubBytes operation.
- I think my attack fails because
+ I think I am making a confusion regarding the endianess of the value of the sector which is getting encrypted 
+ to compute the tweak and because of that I am unable to recover the other half of the XTS-AES key.
 ]
 
 -------------------------------------------------------------------------------

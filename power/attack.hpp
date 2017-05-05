@@ -15,7 +15,7 @@ using namespace std;
  * @brief Constants to describe the relevant error codes returned by the target.
  */
 #define minSample 20
-#define traceSize 5000
+#define traceSize 10000
 
 class Attack {
   private:
@@ -62,7 +62,7 @@ Attack::Attack(FILE* in, FILE* out, void (*clean)(int s)) {
 void Attack::Interact(int block, mpz_class sector, mpz_class& message, vector<int>& power, vector<int>& powerPhase2) {
   gmp_fprintf(target_in, "%d\n", block);  
   unsigned char m_char[16] = {0};
-  mpz_export(m_char, NULL, 1, 1, 0, 0, sector.get_mpz_t());
+  mpz_export(m_char, NULL, -1, 1, 0, 0, sector.get_mpz_t());
   for(int i = 0; i < 16; i++){
    gmp_fprintf(target_in, "%02X", m_char[i]);
   }
@@ -85,7 +85,8 @@ void Attack::Interact(int block, mpz_class sector, mpz_class& message, vector<in
   for(; ind < length; ind++){
     gmp_fscanf(target_out, ",%d", &val);
     if(ind >= length - traceSize){
-      powerPhase2[k++] = val;
+      powerPhase2[k] = val;
+      k++;
     }
   }
   
@@ -173,19 +174,22 @@ void Attack::Execute() {
     AddMoreSamples();
     key2 = Phase1();
     sampleCountPhase2 = 0;
+    powerTracesPhase2.resize(sampleCountPhase2);
+    messages.resize(sampleCountPhase2);
+    messagesPhase2.resize(sampleCountPhase2);
+    sectorsPhase2.resize(sampleCountPhase2);
     int tries = 5;
     do{
       SamplePart2();
-      cout<<sampleCountPhase2<<endl;
       for(int i = 0; i < messages.size(); i++) {
         mpz_class sector = sectorsPhase2[i];
         unsigned char m_char[16] = {0}, t[16] = {0};
-        mpz_export(m_char, NULL, 1, 1, 1, 0, sector.get_mpz_t());
+        mpz_export(m_char, NULL, 1, 1, 0, 0, sector.get_mpz_t());
         AES_KEY rk;
         AES_set_encrypt_key(key2.data(), 128, &rk);
         AES_encrypt(m_char, t, &rk);
         mpz_class T;
-        mpz_import(T.get_mpz_t(), 16, 1, 1, 1, 0, t);      
+        mpz_import(T.get_mpz_t(), 16, 1, 1, 0, 0, t);      
         messagesPhase2[i] = T ^ messages[i];
       }
       key1 = Phase2();
@@ -238,7 +242,7 @@ vector<unsigned char> Attack::Phase1() {
         }
       }
     }
-    key2[15 - n] = bestByte;
+    key2[n] = bestByte;
   }
   printf("Value of Key 2 is:");
   for(int n = 0; n < 16; n++){
@@ -289,7 +293,7 @@ vector<unsigned char> Attack::Phase2(){
         }
       }
     }
-    key1[15 - n] = bestByte;
+    key1[n] = bestByte;
   }
   printf("Value of Key 1 is:");
   for(int n = 0; n < 16; n++){
@@ -310,28 +314,30 @@ bool Attack::TestKey(vector<unsigned char> key1, vector<unsigned char> key2) {
   unsigned char m_char[16] = {0}, t[16] = {0};
   unsigned char rev_m_char[16] = {0};
   mpz_export(m_char, NULL, 1, 1, 0, 0, sector.get_mpz_t());
-  for(int i = 0 ; i <16; i++){
-    rev_m_char[15 - i] = m_char[i];
-  }
 
   printf("\n");
   AES_KEY rk;
   AES_set_encrypt_key(key2.data(), 128, &rk);
-  AES_encrypt(rev_m_char, t, &rk);
+  AES_encrypt(m_char, t, &rk);
+  mpz_class T, PP;
+  mpz_import(T.get_mpz_t(), 16, 1, 1, 0, 0, t);
+  PP = message ^ T;
      
+  unsigned char secondPlaintext[16] = {0};
   unsigned char res[16] = {0};
+  mpz_export(secondPlaintext, NULL, 1, 1, 0, 0, PP.get_mpz_t());
+  
   AES_KEY sk;
   AES_set_encrypt_key(key1.data(), 128, &sk);
-  AES_decrypt(t, res, &sk);
+  AES_decrypt(secondPlaintext, res, &sk);
 
-  mpz_class PP, T;
-  mpz_import(PP.get_mpz_t(), 16, 1, 1, 1, 0, res);
-  mpz_import(T.get_mpz_t(), 16, 1, 1, 1, 0, t);    
-  mpz_class P = PP ^ T;
-  if( P == message){
+  mpz_class CC, C;
+  mpz_import(CC.get_mpz_t(), 16, 1, 1, 0, 0, res);
+  C = CC ^ T;
+  if( C == 0){
     return true;
   } else {
-    gmp_printf("%ZX\n%ZX\n\n",P,message);
+    gmp_printf("%ZX\n\n",C.get_mpz_t());
     return false;
   }
 }
