@@ -55,9 +55,7 @@ Attack::Attack(FILE* in, FILE* out, void (*clean)(int s)){
   cleanup    = clean;
 }
 
-// generate random messages for multiple measurements
 void Attack::RandomMessage(uint8_t m[16]){
-  // open file to read random bytes from
   FILE *f = fopen("/dev/urandom", "rb");
   int l = fread(m, 1, 16, f);
   if(l != 16) {
@@ -76,27 +74,27 @@ void Attack::Execute(){
   int set1, set2, set3, set4;
   int tested_keys = 0;
 
-  // get random messages
   RandomMessage(input);
 
   Interact(c, 0, 8, 1, 0, 0, 0, input);
   Interact(faulty_c, 1, 8, 1, 0, 0, 0, input);
 
+  printf("Computing the equations for delta\n");
   // k1, k8, k11, k14
   set1 = Equation1(c, faulty_c);
-  printf("%d possibilities for k1 , k8 , k11, k14\n", set1);
+  printf("%d possibilities for k1,k8,k11,k14\n", set1);
   // k5, k2, k15, k12
   set2 = Equation2(c,faulty_c);
-  printf("%d possibilities for k2 , k5 , k12, k15\n", set2);
+  printf("%d possibilities for k2,k5,k12,k15\n", set2);
   // k9, k6, k3, k16
   set3 = Equation3(c, faulty_c);
-  printf("%d possibilities for k3 , k6 , k9 , k16\n", set3);
+  printf("%d possibilities for k3,k6,k9,k16\n", set3);
   // k13, k10, k7, k4
   set4 = Equation4(c, faulty_c);
-  printf("%d possibilities for k4 , k7, k10 , k13\n", set4);
+  printf("%d possibilities for k4,k7,k10,k13\n", set4);
 
 
-  printf("Computing last set of equations\n");
+  printf("Computing the equations for f\n");
   #pragma omp parallel for
   for(int j1 = 0; j1< set1; j1++){
     for(int j2 = 0; j2 < set2; j2++){
@@ -104,39 +102,32 @@ void Attack::Execute(){
         for(int j4 = 0; j4 < set4; j4++){
           uint8_t k[16];
           uint8_t k9[16];
-          // key guess after round 10
           k[0]  = kAll[0][j1];  k[7]  = kAll[7][j1];  k[10] = kAll[10][j1];   k[13] = kAll[13][j1];
           k[4]  = kAll[4][j2];  k[1]  = kAll[1][j2];  k[14] = kAll[14][j2];   k[11] = kAll[11][j2];
           k[8]  = kAll[8][j3];  k[5]  = kAll[5][j3];  k[2]  = kAll[2][j3];    k[15] = kAll[15][j3];
           k[12] = kAll[12][j4]; k[9]  = kAll[9][j4];  k[6]  = kAll[6][j4];    k[3]  = kAll[3][j4];
 
-          // same key guess after round 10
           k9[0]  = kAll[0][j1];   k9[7]  = kAll[7][j1];   k9[10] = kAll[10][j1];  k9[13] = kAll[13][j1];
           k9[4]  = kAll[4][j2];   k9[1]  = kAll[1][j2];   k9[14] = kAll[14][j2];  k9[11] = kAll[11][j2];
           k9[8]  = kAll[8][j3];   k9[5]  = kAll[5][j3];   k9[2]  = kAll[2][j3];   k9[15] = kAll[15][j3];
           k9[12] = kAll[12][j4];  k9[9]  = kAll[9][j4];   k9[6]  = kAll[6][j4];   k9[3]  = kAll[3][j4];
 
-          // get key from round 9
           RoundKey(k9, 10);
 
-          // get result of equation
           uint8_t f = SecondEquation2(c, faulty_c, k, k9);
 
-          // check te above result against the other 3 results
           if( f == SecondEquation3(c, faulty_c, k, k9) &&  (GaloisTable3[f] == SecondEquation4(c, faulty_c, k, k9)) && (GaloisTable2[f] == SecondEquation1(c, faulty_c, k, k9)) ) {
             tested_keys = tested_keys + 1;
-            if(tested_keys % 5 == 0)
-              printf("potential keys tested: %d \n", tested_keys  );
-            // get original key used for encryption
+            if(tested_keys % 10 == 0)
+              printf("keys tested: %d \n", tested_keys  );
+
             OriginalKey(k9, 9);
 
-            // simulate AES encryption using the retrieved key
             AES_KEY rk;
             AES_set_encrypt_key( k9, 128, &rk );
             uint8_t result[16];
             AES_encrypt( input, result, &rk );
 
-            // if result is right, found key
             if( !memcmp( result, c, 16 * sizeof( uint8_t ) ) ) {
               printf("potential keys tested: %d \n", tested_keys  );
               printf( "Key found: ");
@@ -150,8 +141,7 @@ void Attack::Execute(){
       }
     }
   }
-  cout<<kAll[0].size();
-  printf("!!!!!!Key not found, something might have gone wrong, try again !!!!\n");
+  printf("Could not find the key; try again !\n");
 }
 
 void Attack::Interact(uint8_t c[16], const int fault, const int r, const int f , const int p, const int i, const int j, const uint8_t m[16]) {
@@ -166,7 +156,6 @@ void Attack::Interact(uint8_t c[16], const int fault, const int r, const int f ,
   fprintf(target_in,"\n");
   fflush( target_in );
 
-  // Receive ( t, r ) from attack target.
   for(int l = 0; l < 16; l++){
     if( 1 != fscanf( target_out, "%2hhx", &c[l] ) ) {
       abort();
