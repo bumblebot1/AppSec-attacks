@@ -81,7 +81,9 @@ might be easy to overlook (e.g., a subtle issue or technique in associated
 source code) should go here:
 
 [
- I have implemented both attacks in C++.
+ I have implemented both attacks in C++. I have tested with version 5.4.0 of g++
+ and the version of the gmp library I have used in my development was 6.1.0 although
+ I have also tested on snowy and the code compiled fine.
 
  The fault attack follows the paper by Tunstall et al. and works by computing the
  set of equations for the values of delta and then using the key hypotheses obtained
