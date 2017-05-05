@@ -19,7 +19,7 @@ Q.1 As a security consultant, you have been working on a prototype of the
     dummy operations (NOP instructions or instructions with random data) and 
     shuffling (changing the sequence of the S-box look-ups at random).
     A second method which directly impacts the power consumption is to hide the 
-    amplitude dimension by lowering the SNR. This can be achieve by either 
+    amplitude dimension by lowering the SNR. This can be achieved by either 
     reducing the signal such that an equal amount of power is used to perform all operations
     and for all data values essentially giving us a set of power traces which appears constant
     (this can be achieved by performing independent operations in parallel)
@@ -68,13 +68,13 @@ Q.3 DPA attacks work because statistics can (to some degree) remove the
     Finally, we have P_const which represents the constant components of P_op, P_data and P_el.noise. 
     If we denote the part of P_op and P_data that is actually exploited as P_exp and the remaining part
     as P_sw.noise we can also define P_total as: P_total = P_exp + P_sw.noise + P_el.noise + P_const
-    Thus we can define the SNR (signal-to-noise ration) as: SNR = Var(P_exp) / Var(P_noise)
-    i.e. the ratio of the used part of the signal to the total noise part of the power trace (including
-    the unused signal denoted as P_sw.noise).
+    Thus we can define the SNR (signal-to-noise ratio) as: SNR = Var(P_exp) / Var(P_noise)
+    i.e. the ratio of the variance of the used part of the signal to the variance of the total noise 
+    part of the power trace (including the unused signal denoted as P_sw.noise).
     From this final definition of SNR we observe that the SNR is a quadratic relationship between the signal
     and the noise and that the SNR is directly proportional with the signal and inverse proportional with the noise,
     meaning when we increase the noise our SNR becomes smaller. Ideally, for a DPA attack to succeed, 
-    we want the SNR to be high and,therefore, the noise to be low.
+    we want the SNR to be high and, therefore, the noise to be low.
 
 
 
@@ -88,5 +88,9 @@ Q.4 DPA attacks include a statistical analysis step, for which one option
     and real power traces, the standard t-test uses the difference of means between the two sets of traces.
     Assuming that in the attack we still compute the distinguisher for 8 bits at the time, given that the probability
     of a bit being 1 is 1/2, the mean of the Hamming weights for our power model is likely to be 4.
-    Thus the t-test will likely evaluate to the same value for different hypotheses and thus will not provide
-    us with consistent evidence to make an informed decision for each bit of the key.
+    Thus, our model is likely to produce the same estimate for the many byte values and will 
+    therefore make the t-test likely to evaluate to the same value for many different guesses
+    which denies us the ability to make an informed decision for each byte of the key.
+    This clearly makes the t-test an inappropriate choice for the task since we need a statistical
+    test which produces strong distinguishing values in order to create a clear hypotheses for the
+    key in the attack.
